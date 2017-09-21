@@ -85,13 +85,13 @@ class Ngrams(object):
 		self.getUnigrams()
 		n = len(self.tokens)
 		voc = len(self.unigrams)
-		return {k: ((v +5)/(n+5*voc)) for k,v in self.unigrams.items()}
+		return {k: ((v +0.005)/(n+0.005*voc)) for k,v in self.unigrams.items()}
 
 	def getProbabilityBigrams(self):
 		self.getUnigrams()
 		self.getBigramsForTraining()
 		voc = len(self.unigrams)
-		return {k1: {k2: (v2+5) / (self.unigrams[k1]+ 5*voc) for k2,v2 in v1.items()} for k1,v1 in self.bigrams.items()}
+		return {k1: {k2: (v2+0.005) / (self.unigrams[k1]+ 0.005*voc) for k2,v2 in v1.items()} for k1,v1 in self.bigrams.items()}
 
 def perplexityUnigram(line, ngramdict):
 	l = line.rstrip().split()
@@ -222,17 +222,35 @@ def main():
 	unigram_prob_dict_neg = neg.getProbabilityUnigrams()
 	bigram_prob_dict_neg = neg.getProbabilityBigrams()
 
+	idr = 0
+
 	#test = Ngrams("dev/pos.txt")
-	with open("dev/pos.txt") as file:
+	with open("test/test.txt") as file:
 			for line in file:
-				perpdict = 	{"pos_unigram": perplexityUnigram(line, unigram_prob_dict_pos),
+				perpdict = 	{#"pos_unigram": perplexityUnigram(line, unigram_prob_dict_pos),
 							"pos_bigram" : perplexityBigram(line, bigram_prob_dict_pos),
-							"neg_unigram" : perplexityUnigram(line, unigram_prob_dict_neg),
+							#"neg_unigram" : perplexityUnigram(line, unigram_prob_dict_neg),
 							"neg_bigram" : perplexityBigram(line, bigram_prob_dict_neg)
 							}
-				with open("record.txt", "a") as newfile:
-					
-					newfile.write(line + min(perpdict, key = perpdict.get))
+				with open("record.csv", "a") as newfile:
+					if (min(perpdict, key = perpdict.get) == "pos_bigram"):
+						idr +=1
+						newfile.write(str(idr)+',0\n')
+					else:
+						idr +=1
+						newfile.write(str(idr)+',1\n')
+
+
+	#getting accuracy
+	# t = 0
+	# numlines = 0
+	# with open("record.txt", 'r') as file:
+	# 	for line in file:
+	# 		t += int(line)
+	# 		numlines += 1
+	
+	# accuracy = t/numlines
+	# print accuracy					
 
 
 
