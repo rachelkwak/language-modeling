@@ -1,0 +1,6 @@
+car vehicle monkey animal
+car vehicle ithaca city
+car vehicle shirt clothes
+brush painter pen writer
+brush painter hammer mason
+brush painter pan cook
