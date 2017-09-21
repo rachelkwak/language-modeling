@@ -230,9 +230,9 @@ def main():
 							"neg_unigram" : perplexityUnigram(line, unigram_prob_dict_neg),
 							"neg_bigram" : perplexityBigram(line, bigram_prob_dict_neg)
 							}
-
-				print perpdict
-				print line + min(perpdict, key = perpdict.get)
+				with open("record.txt", "a") as newfile:
+					
+					newfile.write(line + min(perpdict, key = perpdict.get))
 
 
 
