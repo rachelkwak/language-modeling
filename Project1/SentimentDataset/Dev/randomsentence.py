@@ -1,13 +1,15 @@
 from __future__ import division
 import sys, random
+import math
 from collections import defaultdict
 
 class Ngrams(object):
 	def __init__(self, text):
 		self.text = text
 		self.tokens = []
-		self.unigrams = {}
+		self.unigrams = {"<unk>": 0}
 		self.bigrams = defaultdict(dict)
+		self.unkword = []
 
 	def initTokens(self):
 		with open(self.text) as file:
@@ -17,33 +19,76 @@ class Ngrams(object):
 				self.tokens.extend(line.split())
 		return self.tokens
 
+	#if a word has never been seen before, add to unk count 1, add word as 0
+	#also add it to a list of unknow words, ie the vocabulary
+	#if it has been seen (and is checked by looking at the vocabulary, add to own word count
 	def getUnigrams(self):
 		self.initTokens()
 		for token in self.tokens:
 			if token in self.unigrams:
 				self.unigrams[token] += 1
 			else:
-				self.unigrams[token] = 1
+				self.unigrams[token] = 0
+				self.unigrams["<unk>"] +=1
+
 		return self.unigrams
 
-	def getBigrams(self):
+
+	# def getBigrams(self):
+	# 	self.initTokens()
+	# 	for word1, word2 in zip(self.tokens, self.tokens[1:]):
+	# 		if word1 != ".":
+	# 			if word2 in self.bigrams[word1]:
+	# 				self.bigrams[word1][word2] += 1
+	# 			else:
+	# 				self.bigrams[word1][word2] = 1
+	# 	return self.bigrams
+
+	def getBigramsForTraining(self):
 		self.initTokens()
 		for word1, word2 in zip(self.tokens, self.tokens[1:]):
 			if word1 != ".":
-				if word2 in self.bigrams[word1]:
-					self.bigrams[word1][word2] += 1
+				if word1 in self.bigrams:
+					if word2 in self.bigrams[word1]:
+						self.bigrams[word1][word2] += 1
+					else:
+						self.bigrams[word1][word2] = 1
 				else:
-					self.bigrams[word1][word2] = 1
+					self.bigrams["<unk>"][word2] = 1
+					self.bigrams[word1][word2] = 0
 		return self.bigrams
+
+	# def addOneSmoothing_unigrams(self):
+	# 	unigramDict = self.getUnigrams()
+	# 	for word in unigramDict.keys():
+	# 		unigramDict[word] += 0.5
+	# 	return unigramDict
 
 	def getProbabilityUnigrams(self):
 		self.getUnigrams()
-		return {k: v / len(self.tokens) for k,v in self.unigrams.items()}
+		n = len(self.tokens)
+		voc = len(self.unigrams)
+		return {k: ((v +1)/(n+voc)) for k,v in self.unigrams.items()}
 
 	def getProbabilityBigrams(self):
 		self.getUnigrams()
-		self.getBigrams()
-		return {k1: {k2: v2 / self.unigrams[k1] for k2,v2 in v1.items()} for k1,v1 in self.bigrams.items()}
+		self.getBigramsForTraining()
+		voc = len(self.unigrams)
+		return {k1: {k2: (v2+1) / (self.unigrams[k1]+ voc) for k2,v2 in v1.items()} for k1,v1 in self.bigrams.items()}
+
+def perplexityUnigram(unigram, ngramdict):
+	n = len(unigram.initTokens())
+	logp = 0
+	for word in ngramdict.keys():
+		logp += math.log(1/ngramdict[word])
+		#print logp
+
+	logperplexity = logp*(1/n)
+	perplexity = math.exp(logperplexity)
+	return perplexity
+
+
+
 
 def pickWeighted(ngram):
     total = sum(w for c, w in ngram.items())
@@ -98,16 +143,21 @@ def randomBigram(bigram,seed="<start>"):
 	return word + next_word
 
 
+
 def main():
 	pos = Ngrams("pos.txt")
-	print "pos unigram: " + randomUnigram(pos.getProbabilityUnigrams()) + "\n"
-	print "pos bigram: " + randomBigram(pos.getProbabilityBigrams()) + "\n"
+	#train
+	unigram_prob_dict = pos.getProbabilityUnigrams()
+	print "perplexity : "+ str(perplexityUnigram(pos, unigram_prob_dict))
+
+	# print "pos unigram: " + randomUnigram(pos.getProbabilityUnigrams()) + "\n"
+	# print "pos bigram: " + randomBigram(pos.getProbabilityBigrams()) + "\n"
 	
 	neg = Ngrams("neg.txt")
-	print "neg unigram: " + randomUnigram(neg.getProbabilityUnigrams()) + "\n"
-	print "neg bigram: " + randomBigram(neg.getProbabilityBigrams()) + "\n"
+	# print "neg unigram: " + randomUnigram(neg.getProbabilityUnigrams()) + "\n"
+	# print "neg bigram: " + randomBigram(neg.getProbabilityBigrams()) + "\n"
 
-	print "seeded pos bigram: " + randomBigram(pos.getProbabilityBigrams(), "I") + "\n"
+	# print "seeded pos bigram: " + randomBigram(pos.getProbabilityBigrams(), "I") + "\n"
 
 if __name__ == '__main__':
 	main()
