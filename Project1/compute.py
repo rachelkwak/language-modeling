@@ -1,5 +1,6 @@
 from numpy import dot, array, array_equal
 from numpy.linalg import norm 
+from heapq import nlargest
 
 # compute the cosine similarity of two vectors
 def cosine(u,v):
@@ -15,6 +16,7 @@ def findWord(word_vec, matrx):
 	diff = matrx[1] - matrx[0] + matrx[2]
 	return max(excl_vec.keys(), key=lambda k: cosine(diff, excl_vec[k]))
 
+# compute the accuracy of predicting the fourth word
 def computeAccuracy(analogy_words, word_vec):
 	accuracy = 0
 	for analogy in analogy_words:
@@ -22,4 +24,10 @@ def computeAccuracy(analogy_words, word_vec):
 		word = findWord(word_vec, matrx)
 		if word == analogy[3]:
 			accuracy += 1
+		else:
+			print(analogy, word)
 	return 100 * accuracy / len(analogy_words)
+
+# return the 10 most similar words to a given word
+def findSimilar(word, word_vec):
+	return nlargest(10, word_vec.keys(), key=lambda k: cosine(word, word_vec[k]))
