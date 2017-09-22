@@ -94,10 +94,10 @@ class Ngrams(object):
 		return {k1: {k2: (v2+0.005) / (self.unigrams[k1]+ 0.005*voc) for k2,v2 in v1.items()} for k1,v1 in self.bigrams.items()}
 
 def perplexityUnigram(line, ngramdict):
-	l = line.rstrip().split()
-	n = len(l)
+	#l = line.rstrip().split()
+	n = len(line)
 	logp = 0
-	for word in l:
+	for word in line:
 		if word in ngramdict.keys():
 			logp += math.log(1/ngramdict[word])
 		else:
@@ -108,10 +108,10 @@ def perplexityUnigram(line, ngramdict):
 	return perplexity
 
 def perplexityBigram(line, ngramdict):
-	l = line.rstrip().split()
-	n = len(l)
+	#l = line.rstrip().split()
+	n = len(line)
 	logp = 0
-	for word1, word2 in zip(l, l[1:]):
+	for word1, word2 in zip(line, line[1:]):
 		if word1 in ngramdict.keys():
 			if word2 in ngramdict[word1].keys():
 				logp += math.log(ngramdict[word1][word2])
@@ -212,8 +212,8 @@ def main():
 
 	# print "seeded pos bigram: " + randomBigram(pos.getProbabilityBigrams(), "I") + "\n"
 
-	#model1 - unigram positive 
-	#train on training set: unigram_prob_dict
+	#######perplexity calculation#############
+	
 	pos = Ngrams("Train/pos.txt")
 	unigram_prob_dict_pos = pos.getProbabilityUnigrams()
 	bigram_prob_dict_pos = pos.getProbabilityBigrams()
@@ -221,6 +221,39 @@ def main():
 	neg = Ngrams("Train/neg.txt")
 	unigram_prob_dict_neg = neg.getProbabilityUnigrams()
 	bigram_prob_dict_neg = neg.getProbabilityBigrams()
+
+
+	devpos = Ngrams("Dev/pos.txt")
+
+	dev_unigrams = devpos.getProbabilityUnigrams()
+
+
+	perpdict_pos = {
+				"pos_unigram": perplexityUnigram(dev_unigrams.keys(), unigram_prob_dict_pos),
+				"pos_bigram" : perplexityBigram(dev_unigrams.keys(), bigram_prob_dict_pos),
+				"neg_unigram" : perplexityUnigram(dev_unigrams.keys(), unigram_prob_dict_neg),
+				"neg_bigram" : perplexityBigram(dev_unigrams.keys(), bigram_prob_dict_neg)
+	}
+
+	print "positive"
+	print perpdict_pos
+
+	devpos = Ngrams("Dev/neg.txt")
+
+	dev_unigrams_neg = devpos.getProbabilityUnigrams()
+
+
+	perpdict_neg = {
+				"pos_unigram": perplexityUnigram(dev_unigrams_neg.keys(), unigram_prob_dict_pos),
+				"pos_bigram" : perplexityBigram(dev_unigrams_neg.keys(), bigram_prob_dict_pos),
+				"neg_unigram" : perplexityUnigram(dev_unigrams_neg.keys(), unigram_prob_dict_neg),
+				"neg_bigram" : perplexityBigram(dev_unigrams_neg.keys(), bigram_prob_dict_neg)
+	}
+
+	print "negitive"
+	print perpdict_neg
+
+	#################### sentiment analysis ####################
 
 	idr = 0
 
@@ -239,6 +272,7 @@ def main():
 					else:
 						idr +=1
 						newfile.write(str(idr)+',1\n')
+
 
 
 	#getting accuracy
