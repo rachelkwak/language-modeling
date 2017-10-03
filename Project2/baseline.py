@@ -1,9 +1,3 @@
-"""
-for line in open("test.txt"):
-    ## Get the next line of the metadata file, and split it into columns
-    fields = line.rstrip().split("\t")
-    print fields
-"""
 output = open("output.txt", "w")
 output.write("Type,Prediction\n")
 output.write("ORG,")
@@ -14,6 +8,8 @@ def check(words, pos, i):
 with open("test.txt") as f:
 	while True:
 		words, pos, index = [f.readline().rstrip().split() for _ in range(3)]
+		if not words or not pos or not index:
+			break
 		i = 0
 		while i < len(words):
 			if check(words, pos, i):
@@ -21,10 +17,10 @@ with open("test.txt") as f:
 				while i+1 < len(words) and check(words, pos, i+1):
 					i += 1
 				range_index = str(range_index) + "-" + str(index[i])
+				print range_index
 				output.write(range_index + " ")
 			i += 1
-		if not f.readline():
-			break
+		
 
 output.write("\n")
 output.write("MISC,\n")
