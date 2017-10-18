@@ -16,28 +16,9 @@ with open("test.txt") as f:
 				all_ranges.append(str(range_index) + "-" + str(index[i]))
 			i += 1
 
-
 output = open("output.txt", "w")
 output.write("Type,Prediction\n")
-output.write("ORG,")
-for i in all_ranges[:len(all_ranges)/4-1]:
-    output.write(i + " ")
-output.write(all_ranges[len(all_ranges)/4-1])
-output.write("\n")
-
-output.write("MISC,")
-for i in all_ranges[len(all_ranges)/4:len(all_ranges)*2/4-1]:
-    output.write(i + " ")
-output.write(all_ranges[len(all_ranges)/4-1])
-output.write("\n")
-
-output.write("PER,")
-for i in all_ranges[len(all_ranges)*2/4:len(all_ranges)*3/4-1]:
-    output.write(i + " ")
-output.write(all_ranges[len(all_ranges)*3/4-1])
-output.write("\n")
-
-output.write("LOC,")
-for i in all_ranges[len(all_ranges)*3/4:len(all_ranges)-1]:
-    output.write(i + " ")
-output.write(all_ranges[len(all_ranges)-1])
+output.write("ORG," + " ".join(all_ranges[:len(all_ranges)/4]) + "\n")
+output.write("MISC," + " ".join(all_ranges[len(all_ranges)/4:len(all_ranges)*2/4]) + "\n")
+output.write("PER," + " ".join(all_ranges[len(all_ranges)*2/4:len(all_ranges)*3/4]) + "\n")
+output.write("LOC," + " ".join(all_ranges[len(all_ranges)*3/4:]))
