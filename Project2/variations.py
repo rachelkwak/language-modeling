@@ -85,43 +85,26 @@ def test_entity_index(iobs, indicies):
     return org, misc, per, loc
 
 
-# Takes in list of correct entities and list of predicted entities
-# Returns precision, recall, and f-score measures in this order
-def measures(actual, predict):
-    true_pos = 0
-    for range in actual:
-        if range in predict:
-            true_pos += 1
-    if true_pos == 0:
-        return 0, 0, 0
-    p = true_pos / len(predict)
-    r = true_pos / len(actual)
-    f = (2 * p * r) / (p + r)
-    return p, r, f
-
-# calculates the precision, recall, and f-score for all entities and prints out the results
-def calculate_measures(org_true, misc_true, per_true, loc_true, iob_predict, model_describe):
+# calculates the precision, recall, and f1-score at entity level and prints out the results
+def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, model_describe):
     org_pred, misc_pred, per_pred, loc_pred = entity_index(iob_predict)
     
     # accuracy measures
-    org_measure = measures(org_true, org_pred)
-    misc_measure = measures(misc_true, misc_pred)
-    per_measure = measures(per_true, per_pred)
-    loc_measure = measures(loc_true, loc_pred)
-    
-    # print results
+    true_positive = float(sum([1 for org in org_gold if org in org_pred])
+                    + sum([1 for misc in misc_gold if misc in misc_pred])
+                    + sum([1 for per in per_gold if per in per_pred])
+                    + sum([1 for loc in loc_gold if loc in loc_pred]))
+
+    gold = len(org_gold) + len(misc_gold) + len(per_gold) + len(loc_gold)
+    pred = len(org_pred) + len(misc_pred) + len(per_pred) + len(loc_pred)
+
     print("\n" + model_describe)
-    print("Type\tPercision\t\tRecall\t\t\tF-score")
-    print("ORG\t" + "\t".join(str(x) for x in org_measure))
-    print("MISC\t" + "\t".join(str(x) for x in misc_measure))
-    print("PER\t" + "\t".join(str(x) for x in per_measure))
-    print("LOC\t" + "\t".join(str(x) for x in loc_measure))
-    print("Averge\t" + str((org_measure[0]+misc_measure[0]+per_measure[0]+loc_measure[0])/4)
-          + "\t" + str((org_measure[1]+misc_measure[1]+per_measure[1]+loc_measure[1])/4)
-          + "\t" + str((org_measure[2]+misc_measure[2]+per_measure[1]+loc_measure[2])/4))
+    print("Percision: " + str(true_positive/pred))
+    print("Recall: " + str(true_positive/gold))
+    print("F1-score: " + str(2*true_positive/(pred+gold)))
 
 
-def word2features(line, ind):
+def word_to_features(line, ind):
     word = line[ind][0]
     postag = line[ind][1]
     features = {
@@ -162,7 +145,7 @@ def word2features(line, ind):
     return features
 
 def get_features(line):
-    return [word2features(line, ind) for ind in range(len(line))]
+    return [word_to_features(line, ind) for ind in range(len(line))]
 
 def get_labels(line):
     return [iob for tok, pos, iob in line]
@@ -213,7 +196,7 @@ def main():
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Gradient descent using the L-BFGS method")
     
     # feature statistics
-    print_features_stats(lbfgs_crf)
+    #print_features_stats(lbfgs_crf)
     
 
     # training data using CRF with Stochastic Gradient Descent training algorithm and Elastic Net (L2) regularization
@@ -226,7 +209,7 @@ def main():
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Stochastic Gradient Descent with L2 regularization term")
 
     # feature statistics
-    print_features_stats(l2sgd_crf)
+    #print_features_stats(l2sgd_crf)
 
     # training data using CRF with Averaged Perceptron training algorithm
     ap_crf = sklearn_crfsuite.CRF(algorithm = 'ap', max_iterations = 100, all_possible_transitions = True)
@@ -238,7 +221,7 @@ def main():
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Averaged Perceptron")
     
     # feature statistics
-    print_features_stats(ap_crf)
+    #print_features_stats(ap_crf)
     
 
     # training data using CRF with Passive Aggressive training algorithm
@@ -248,10 +231,10 @@ def main():
     y_pred = pa_crf.predict(X_valid) # testing with validation set
     
     # accuracy measures
-    calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Averaged Perceptron")
+    calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Passive Aggressive")
     
     # feature statistics
-    print_features_stats(pa_crf)
+    #print_features_stats(pa_crf)
 
 
     # training data using CRF with Adaptive Regularization Of Weight Vector training algorithm
@@ -264,7 +247,7 @@ def main():
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Adaptive Regularization Of Weight Vector")
 
     # feature statistics
-    print_features_stats(arow_crf)
+    #print_features_stats(arow_crf)
 
 
     # using test data on best model
@@ -282,7 +265,7 @@ def main():
     output.write("ORG," + " ".join(org_pred) + "\n")
     output.write("MISC," + " ".join(misc_pred) + "\n")
     output.write("PER," + " ".join(per_pred) + "\n")
-    output.write("LOC," + " ".join(loc_prred))
+    output.write("LOC," + " ".join(loc_pred))
 
 
 if __name__ == '__main__':
