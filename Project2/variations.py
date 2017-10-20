@@ -147,7 +147,7 @@ def word_to_features(line, ind):
 def get_features(line):
     return [word_to_features(line, ind) for ind in range(len(line))]
 
-def get_labels(line):
+def get_iobs(line):
     return [iob for tok, pos, iob in line]
 
 def get_tokens(line):
@@ -180,75 +180,74 @@ def main():
     
     # extracting features for word tokens
     X_train = [get_features(line) for line in train]
-    y_train = [get_labels(line) for line in train]
+    y_train = [get_iobs(line) for line in train]
     X_valid = [get_features(line) for line in valid]
-    y_valid = [get_labels(line) for line in valid]
+    y_valid = [get_iobs(line) for line in valid]
     org_true, misc_true, per_true, loc_true = entity_index(y_valid)
 
 
     # training data using CRF with L-BFGS training algorithm and Elastic Net (L1 + L2) regularization
     lbfgs_crf = sklearn_crfsuite.CRF(algorithm = 'lbfgs', c1 = 0.1, c2 = 0.1, max_iterations = 100, all_possible_transitions = True)
     lbfgs_crf.fit(X_train, y_train)
-    labels = list(lbfgs_crf.classes_)
+    iobs = list(lbfgs_crf.classes_)
     y_pred = lbfgs_crf.predict(X_valid) # testing with validation set
     
     # accuracy measures
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Gradient descent using the L-BFGS method")
     
     # feature statistics
-    #print_features_stats(lbfgs_crf)
-    
+    print_features_stats(lbfgs_crf)
+
 
     # training data using CRF with Stochastic Gradient Descent training algorithm and Elastic Net (L2) regularization
     l2sgd_crf = sklearn_crfsuite.CRF(algorithm = 'l2sgd', c2 = 0.1, max_iterations = 100, all_possible_transitions = True)
     l2sgd_crf.fit(X_train, y_train)
-    labels = list(l2sgd_crf.classes_)
+    iobs = list(l2sgd_crf.classes_)
     y_pred = l2sgd_crf.predict(X_valid) # testing with validation set
-    
+
     # accuracy measures
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Stochastic Gradient Descent with L2 regularization term")
 
     # feature statistics
-    #print_features_stats(l2sgd_crf)
+    print_features_stats(l2sgd_crf)
 
     # training data using CRF with Averaged Perceptron training algorithm
     ap_crf = sklearn_crfsuite.CRF(algorithm = 'ap', max_iterations = 100, all_possible_transitions = True)
     ap_crf.fit(X_train, y_train)
-    labels = list(ap_crf.classes_)
+    iobs = list(ap_crf.classes_)
     y_pred = ap_crf.predict(X_valid) # testing with validation set
     
     # accuracy measures
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Averaged Perceptron")
     
     # feature statistics
-    #print_features_stats(ap_crf)
+    print_features_stats(ap_crf)
     
 
     # training data using CRF with Passive Aggressive training algorithm
     pa_crf = sklearn_crfsuite.CRF(algorithm = 'pa', max_iterations = 100, all_possible_transitions = True)
     pa_crf.fit(X_train, y_train)
-    labels = list(pa_crf.classes_)
+    iobs = list(pa_crf.classes_)
     y_pred = pa_crf.predict(X_valid) # testing with validation set
     
     # accuracy measures
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Passive Aggressive")
     
     # feature statistics
-    #print_features_stats(pa_crf)
+    print_features_stats(pa_crf)
 
 
     # training data using CRF with Adaptive Regularization Of Weight Vector training algorithm
     arow_crf = sklearn_crfsuite.CRF(algorithm = 'arow', max_iterations = 100, all_possible_transitions = True)
     arow_crf.fit(X_train, y_train)
-    labels = list(arow_crf.classes_)
+    iobs = list(arow_crf.classes_)
     y_pred = arow_crf.predict(X_valid) # testing with validation set
     
     # accuracy measures
     calculate_measures(org_true, misc_true, per_true, loc_true, y_pred, "CRF: Adaptive Regularization Of Weight Vector")
 
     # feature statistics
-    #print_features_stats(arow_crf)
-
+    print_features_stats(arow_crf)
 
     # using test data on best model
     # get test data
@@ -256,7 +255,7 @@ def main():
 
     # get predictions for entities
     X_test = [get_features(line) for line in test]
-    y_pred = pa_crf.predict(X_test)
+    y_pred = arow_crf.predict(X_test)
     org_pred, misc_pred, per_pred, loc_pred = test_entity_index(y_pred, indicies)
 
     # output the results in file named output.txt
