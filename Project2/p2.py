@@ -122,6 +122,7 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     transitionProb = transition_prob[entity]["<starten>"]
                 except KeyError:
                     transitionProb = 0
+
             
             score[tok2] = {entity : lexicalProb*transitionProb}
             backpointer[tok2] = {entity: "<starten>"}
