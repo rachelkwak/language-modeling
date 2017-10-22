@@ -194,8 +194,6 @@ print ans_dict
 
 def test_entity_index(iobs, indicies):
     org, misc, per, loc = [], [], [], []
-    iobs = [item for sublist in iobs for item in sublist]
-    indicies = [item for sublist in indicies for item in sublist]
     ind = 0
     while ind < len(iobs):
         if iobs[ind] != "O":
@@ -214,10 +212,11 @@ def test_entity_index(iobs, indicies):
                 loc.append(range)
         ind += 1
     return org, misc, per, loc
-"""
+
 # get test data entity predictions
 pred_toks = [ans_dict[tok] for tok, pos, ind in test]
 pred_ind = [ind for tok, pos, ind in test]
+
 org_pred, misc_pred, per_pred, loc_pred = test_entity_index(pred_toks, pred_ind)
 
 # output the results in file named output.txt
@@ -227,4 +226,4 @@ output.write("ORG," + " ".join(org_pred) + "\n")
 output.write("MISC," + " ".join(misc_pred) + "\n")
 output.write("PER," + " ".join(per_pred) + "\n")
 output.write("LOC," + " ".join(loc_pred))
-"""
+
