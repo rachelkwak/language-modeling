@@ -117,7 +117,7 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     transitionProb = 0
             else: #new/unseen word
                 lexicalProb = getlexicalProb(train, lex_list, token_list)["<unk>"][entity]
-                transitionProb = getTransitionProb(unigrams, trans)[entity]["<start>"]
+                transitionProb = getTransitionProb(unigrams, trans)[entity]["<starten>"]
             
             score = {tok2:{entity : lexicalProb*transitionProb}}
             backpointer = {tok2: {entity: "<starten>"}}
@@ -154,7 +154,7 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 score = {tok2: {entity: max_score*lexicalProb*transitionProb}}
                 backpointer = {tok2: {entity: max_score_ent}}
    
-    ans_dict = {tok2: backpointer[tok2][max_score_ent]}   
+    ans_dict[tok2] = backpointer[tok2][max_score_ent]   
         
 print ans_dict
                 
