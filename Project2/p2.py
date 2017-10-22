@@ -163,7 +163,10 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 else:
                     score[tok2] = {entity: max_score*lexicalProb*transitionProb}
                 
-                backpointer[tok2] = {entity: max_score_ent}
+                if tok2 in backpointer:
+                    backpointer[tok2][entity] =  max_score_ent
+                else:
+                    backpointer[tok2] = {entity: max_score_ent}
             else:
                 if entity in lexical_prob["<unk>"]:
                     lexicalProb = lexical_prob["<unk>"][entity]
@@ -180,10 +183,12 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 else:
                     score[tok2] = {entity: max_score*lexicalProb*transitionProb}
                 
-
-                backpointer[tok2] = {entity: max_score_ent}
+                if tok2 in backpointer:
+                    backpointer[tok2][entity] =  max_score_ent
+                else:
+                    backpointer[tok2] = {entity: max_score_ent}
                 
-        ans_dict[tok2] = backpointer[tok1][max_score_ent]
+        ans_dict[tok2] = backpointer[tok2][max_score_ent]
 print ans_dict
 
 def test_entity_index(iobs, indicies):
@@ -208,7 +213,7 @@ def test_entity_index(iobs, indicies):
                 loc.append(range)
         ind += 1
     return org, misc, per, loc
-
+"""
 # get test data entity predictions
 pred_toks = [ans_dict[tok] for tok, pos, ind in test]
 pred_ind = [ind for tok, pos, ind in test]
@@ -221,3 +226,4 @@ output.write("ORG," + " ".join(org_pred) + "\n")
 output.write("MISC," + " ".join(misc_pred) + "\n")
 output.write("PER," + " ".join(per_pred) + "\n")
 output.write("LOC," + " ".join(loc_pred))
+"""
