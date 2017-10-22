@@ -8,7 +8,6 @@ with open("train.txt") as f:
         orig_train.append(("<start>", "<startp>", "<starten>"))
         for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
             orig_train.append((tok,p,i))
-        
 
 train, test = orig_train[:int(len(orig_train)*.9)], orig_train[int(len(orig_train)*.9):]
 val = [("<start>", "<startp>", "<starten>")] + test
@@ -84,7 +83,11 @@ def getlexicalProb(tup_arr, lex_list, token_list):
     
 def getTransitionProb(unigrams, transition):
     voc = len(unigrams)
+<<<<<<< HEAD
     return {k1: {k2: float (v2+1) / float (unigrams[k1]+ 1*voc) for k2,v2 in v1.items()} 
+=======
+    return {k1: {k2: (v2+1) / float (unigrams[k1]+ 1*voc) for k2,v2 in v1.items()} 
+>>>>>>> d22146c842d8297d85ef150db06dd8eb851d5652
               for k1,v1 in transition.items()}
     #{entitiy1: {entity2: prob}}
     
@@ -101,24 +104,30 @@ token_list = unigram_token(train)
 lex_list = lexical(train)
 unigrams = unigramCount(train)
 trans = transition(train) 
+lexical_prob = getlexicalProb(train, lex_list, token_list)
+transition_prob = getTransitionProb(unigrams, trans)
 
 ##for initialization
 for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
     if iob1 == "<starten>":
         for entity in possible_entities:
-            if (tok2 in getlexicalProb(train, lex_list, token_list)) and (entity in getTransitionProb(unigrams, trans)):
-                if entity in getlexicalProb(train, lex_list, token_list)[tok2]:
-                    lexicalProb = getlexicalProb(train, lex_list, token_list)[tok2][entity]
-                    if "<starten>" in getTransitionProb(unigrams, trans)[entity]:
-                        transitionProb = getTransitionProb(unigrams, trans)[entity]["<starten>"]
+            if (tok2 in lexical_prob) and (entity in transition_prob):
+                if entity in lexical_prob[tok2]:
+                    lexicalProb = lexical_prob[tok2][entity]
+                    if "<starten>" in transition_prob[entity]:
+                        transitionProb = transition_prob[entity]["<starten>"]
                     else:
                         transitionProb = 1/(unigrams[entity]+ len(unigrams))
                 else:
                     lexicalProb = 0
                     transitionProb = 0
             else: #new/unseen word
-                lexicalProb = getlexicalProb(train, lex_list, token_list)["<unk>"][entity]
-                transitionProb = getTransitionProb(unigrams, trans)[entity]["<starten>"]
+                lexicalProb = lexical_prob["<unk>"][entity]
+                try:
+                    transitionProb = transition_prob[entity]["<starten>"]
+                except KeyError:
+                    transitionProb = 0
+
             
             score[tok2] = {entity : lexicalProb*transitionProb}
             backpointer[tok2] = {entity: "<starten>"}
@@ -130,11 +139,11 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
         max_score_ent = max(score[tok1].iteritems(), key = operator.itemgetter(1))[0]
         max_score = score[tok1][max_score_ent]
         for entity in possible_entities:
-            if (tok2 in getlexicalProb(train, lex_list, token_list)) and (entity in getTransitionProb(unigrams, trans)):
-                if entity in getlexicalProb(train, lex_list, token_list)[tok2]:
-                    lexicalProb = getlexicalProb(train, lex_list, token_list)[tok2][entity]
-                    if max_score_ent in getTransitionProb(unigrams, trans)[entity]:
-                        transitionProb = getTransitionProb(unigrams, trans)[entity][max_score_ent]
+            if (tok2 in lexical_prob) and (entity in transition_prob):
+                if entity in lexical_prob[tok2]:
+                    lexicalProb = lexical_prob[tok2][entity]
+                    if max_score_ent in transition_prob[entity]:
+                        transitionProb = transition_prob[entity][max_score_ent]
                     else:
                         transitionProb = 1/(unigrams[entity]+ len(unigrams))   
                 else:
@@ -143,10 +152,10 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 score[tok2] = {entity: max_score*lexicalProb*transitionProb}
                 backpointer[tok2] = {entity: max_score_ent}
             else:
-                if entity in getlexicalProb(train, lex_list, token_list)["<unk>"]:
-                    lexicalProb = getlexicalProb(train, lex_list, token_list)["<unk>"][entity]
-                    if max_score_ent in getTransitionProb(unigrams, trans)[entity]:
-                        transitionProb = getTransitionProb(unigrams, trans)[entity][max_score_ent]
+                if entity in lexical_prob["<unk>"]:
+                    lexicalProb = lexical_prob["<unk>"][entity]
+                    if max_score_ent in transition_prob[entity]:
+                        transitionProb = transition_prob[entity][max_score_ent]
                     else:
                         transitionProb = 1/(unigrams[entity]+ len(unigrams))
                 else:
@@ -154,9 +163,15 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     transitionProb = 0
                 score[tok2] = {entity: max_score*lexicalProb*transitionProb}
                 backpointer[tok2] = {entity: max_score_ent}
+<<<<<<< HEAD
 
         ans_dict[tok2] = backpointer[tok2][max_score_ent] 
         
         
 print ans_dict
 
+=======
+   
+        ans_dict[tok2] = backpointer[tok2][max_score_ent]
+print ans_dict
+>>>>>>> d22146c842d8297d85ef150db06dd8eb851d5652
