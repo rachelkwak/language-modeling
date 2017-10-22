@@ -22,18 +22,16 @@ def lexical(tup_arr):
             if i in lex_list[tok]:
                 lex_list[tok][i] += 1
             else:
-                lex_list[tok] = {i : 1}
+                lex_list[tok][i] = 1
         else:
             if i in lex_list["<unk>"]:
                 lex_list["<unk>"][i] += 1
                 lex_list[tok] = {i: 0}
             else:
-                lex_list["<unk>"] = {i : 1}
+                lex_list["<unk>"][i] = 1
                 lex_list[tok] = {i: 0}
                 
     return lex_list
-
-
 
 def transition(tup_arr):
     transition_list = {"B-PER":{}, "I-PER":{}, "B-LOC":{}, "I-LOC":{}, "<starten>": {},
