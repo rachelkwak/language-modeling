@@ -44,10 +44,11 @@ def transition(tup_arr):
 				if i2 in transition_list[i1]:
 					transition_list[i1][i2] += 1
 				else:
-					transition_list[i1] = {i2 : 1}
+					transition_list[i1][i2] = 1
 			else:
 				print "invalid bigram iod"
     return transition_list
+
 
 def unigramCount(tup_arr):
     unigram_list = {"B-PER":0, "I-PER":0, "B-LOC":0, "I-LOC":0, "<starten>" : 0,
@@ -71,15 +72,13 @@ def unigram_token(tup_arr):
 				unigrams[tok] = 0
 
     return unigrams
-    
-    
 
 def getlexicalProb(tup_arr, lex_list, token_list):
     voc = len(lex_list)
     return {k1: {k2: float (v2+1) / float (token_list[k1]+ 1*voc) for k2,v2 in v1.items()} 
               for k1,v1 in lex_list.items()}
     #{word: {entity1: prob(w|entity), entity2: prob(w|entity2)}}
-    
+
     
 def getTransitionProb(unigrams, transition):
     voc = len(unigrams)
@@ -100,7 +99,6 @@ token_list = unigram_token(train)
 lex_list = lexical(train)
 unigrams = unigramCount(train)
 trans = transition(train) 
-
 
 ##for initialization
 for (tok1, p1, iob1), (tok2, p2, iob2) in zip(test, test[1:]):
@@ -161,16 +159,3 @@ print ans_dict
     
 
 #finishing
-                
-                
-            
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
