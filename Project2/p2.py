@@ -83,11 +83,8 @@ def getlexicalProb(tup_arr, lex_list, token_list):
     
 def getTransitionProb(unigrams, transition):
     voc = len(unigrams)
-<<<<<<< HEAD
+
     return {k1: {k2: float (v2+1) / float (unigrams[k1]+ 1*voc) for k2,v2 in v1.items()} 
-=======
-    return {k1: {k2: (v2+1) / float (unigrams[k1]+ 1*voc) for k2,v2 in v1.items()} 
->>>>>>> d22146c842d8297d85ef150db06dd8eb851d5652
               for k1,v1 in transition.items()}
     #{entitiy1: {entity2: prob}}
     
@@ -163,15 +160,8 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     transitionProb = 0
                 score[tok2] = {entity: max_score*lexicalProb*transitionProb}
                 backpointer[tok2] = {entity: max_score_ent}
-<<<<<<< HEAD
 
-        ans_dict[tok2] = backpointer[tok2][max_score_ent] 
-        
-        
-print ans_dict
-
-=======
    
         ans_dict[tok2] = backpointer[tok2][max_score_ent]
 print ans_dict
->>>>>>> d22146c842d8297d85ef150db06dd8eb851d5652
+
