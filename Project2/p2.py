@@ -174,8 +174,7 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 
 
                 backpointer[tok2] = {entity: max_score_ent}
-
-        print backpointer
+                
         ans_dict[tok2] = backpointer[tok1][max_score_ent]
 print ans_dict
 
