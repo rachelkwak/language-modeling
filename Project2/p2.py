@@ -114,7 +114,7 @@ transition_prob = getTransitionProb(unigrams, trans)
 
 ##for initialization
 for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
-    
+    print score
     if iob1 == "<starten>":
         for entity in possible_entities:
             if (tok2 in lexical_prob) and (entity in transition_prob):
@@ -187,6 +187,7 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     backpointer[tok2][entity] =  max_score_ent
                 else:
                     backpointer[tok2] = {entity: max_score_ent}
+                
                 
         ans_dict[tok2] = backpointer[tok2][max_score_ent]
 print ans_dict
