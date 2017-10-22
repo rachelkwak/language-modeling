@@ -9,7 +9,15 @@ with open("train.txt") as f:
         for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
             orig_train.append((tok,p,i))
 
-train, test = orig_train[:int(len(orig_train)*.9)], orig_train[int(len(orig_train)*.9):]
+test = []
+with open("test.txt") as f:
+    for toks, pos, iob in izip_longest(*[f]*3, fillvalue = None):
+        orig_train.append(("<start>", "<startp>", "<starten>"))
+        for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
+            test.append((tok,p,i))
+
+train = orig_train
+#train, test = orig_train[:int(len(orig_train)*.9)], orig_train[int(len(orig_train)*.9):]
 val = [("<start>", "<startp>", "<starten>")] + test
 
 #print train
@@ -163,5 +171,42 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
 
    
         ans_dict[tok2] = backpointer[tok2][max_score_ent]
-print ans_dict
+#print ans_dict
+
+def test_entity_index(iobs, indicies):
+    org, misc, per, loc = [], [], [], []
+    iobs = [item for sublist in iobs for item in sublist]
+    indicies = [item for sublist in indicies for item in sublist]
+    ind = 0
+    while ind < len(iobs):
+        if iobs[ind] != "O":
+            type = iobs[ind]
+            range_ind = indicies[ind]
+            while ind+1 < len(iobs) and iobs[ind+1] != type and type[type.index('-')+1:] in iobs[ind+1]:
+                ind += 1
+            range = str(range_ind) + "-" + str(indicies[ind])
+            if "ORG" in type:
+                org.append(range)
+            elif "MISC" in type:
+                misc.append(range)
+            elif "PER" in type:
+                per.append(range)
+            else:
+                loc.append(range)
+        ind += 1
+    return org, misc, per, loc
+
+# get test data entity predictions
+pred_toks = [ans_dict[tok] for tok, pos, ind in test]
+pred_ind = [ind for tok, pos, ind in test]
+org_pred, misc_pred, per_pred, loc_pred = test_entity_index(pred_toks, pred_ind)
+
+# output the results in file named output.txt
+output = open("output.txt", "w")
+output.write("Type,Prediction\n")
+output.write("ORG," + " ".join(org_pred) + "\n")
+output.write("MISC," + " ".join(misc_pred) + "\n")
+output.write("PER," + " ".join(per_pred) + "\n")
+output.write("LOC," + " ".join(loc_pred))
+
 

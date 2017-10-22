@@ -145,9 +145,10 @@ def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, mod
     pred = len(org_pred) + len(misc_pred) + len(per_pred) + len(loc_pred)
 
     print("\n" + model_describe)
-    print("Percision: " + str(true_positive/pred))
-    print("Recall: " + str(true_positive/gold))
-    print("F1-score: " + str(2*true_positive/(pred+gold)))
+    print("Percision:  %0.5f" % (true_positive/pred))
+    print("Recall:  %0.5f" % (true_positive/gold))
+    print("F1-score:  %0.5f" % (2*true_positive/(pred+gold)))
+
 
 
 def iob_counts(train):
@@ -219,9 +220,9 @@ def main():
 
     """
         Baseline
-        Percision: 0.634167385677308
-        Recall: 0.5944197331176708
-        F1-score: 0.6136505948653725
+        Percision:  0.63417
+        Recall:  0.59442
+        F1-score:  0.61365
         Kaggle: 0.64833
     """
     # training and applying baseline on validation set
