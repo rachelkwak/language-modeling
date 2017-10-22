@@ -106,6 +106,7 @@ transition_prob = getTransitionProb(unigrams, trans)
 
 ##for initialization
 for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
+    
     if iob1 == "<starten>":
         for entity in possible_entities:
             if (tok2 in lexical_prob) and (entity in transition_prob):
@@ -114,10 +115,10 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     if "<starten>" in transition_prob[entity]:
                         transitionProb = transition_prob[entity]["<starten>"]
                     else:
-                        transitionProb = 1/(unigrams[entity]+ len(unigrams))
+                        transitionProb = 1/float (unigrams[entity]+ len(unigrams))
                 else:
-                    lexicalProb = 0
-                    transitionProb = 0
+                    lexicalProb = 1/float(token_list[tok2] + len(lex_list))
+                    transitionProb = 1/float (unigrams[entity]+ len(unigrams))
             else: #new/unseen word
                 lexicalProb = lexical_prob["<unk>"][entity]
                 try:
@@ -125,14 +126,16 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 except KeyError:
                     transitionProb = 0
 
-            
-            score[tok2] = {entity : lexicalProb*transitionProb}
+            if tok2 in score:
+                score[tok2][entity] =  lexicalProb*transitionProb
+            else:
+                score[tok2] = {entity: lexicalProb*transitionProb}
             backpointer[tok2] = {entity: "<starten>"}
             ans_dict["<start>"] = "<starten>"
             
 ##iteration
     else:
-        # print score
+    
         max_score_ent = max(score[tok1].iteritems(), key = operator.itemgetter(1))[0]
         max_score = score[tok1][max_score_ent]
         for entity in possible_entities:
@@ -142,11 +145,16 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     if max_score_ent in transition_prob[entity]:
                         transitionProb = transition_prob[entity][max_score_ent]
                     else:
-                        transitionProb = 1/(unigrams[entity]+ len(unigrams))   
+                        transitionProb = 1/float (unigrams[entity]+ len(unigrams))   
                 else:
-                    lexicalProb = 0
-                    transitionProb = 0
-                score[tok2] = {entity: max_score*lexicalProb*transitionProb}
+                    lexicalProb = 1/float(token_list[tok2] + len(lex_list))
+                    transitionProb = 1/float (unigrams[entity]+ len(unigrams))
+                
+                if tok2 in score:
+                    score[tok2][entity] = max_score*lexicalProb*transitionProb
+                else:
+                    score[tok2] = {entity: max_score*lexicalProb*transitionProb}
+                
                 backpointer[tok2] = {entity: max_score_ent}
             else:
                 if entity in lexical_prob["<unk>"]:
@@ -154,14 +162,20 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                     if max_score_ent in transition_prob[entity]:
                         transitionProb = transition_prob[entity][max_score_ent]
                     else:
-                        transitionProb = 1/(unigrams[entity]+ len(unigrams))
+                        transitionProb = 1/ float (unigrams[entity]+ len(unigrams))
                 else:
-                    lexicalProb = 0 
-                    transitionProb = 0
-                score[tok2] = {entity: max_score*lexicalProb*transitionProb}
+                   lexicalProb = 1/float(token_list[tok2] + len(lex_list))
+                   transitionProb = 1/float (unigrams[entity]+ len(unigrams))
+                
+                if tok2 in score:
+                    score[tok2][entity] = max_score*lexicalProb*transitionProb
+                else:
+                    score[tok2] = {entity: max_score*lexicalProb*transitionProb}
+                
+
                 backpointer[tok2] = {entity: max_score_ent}
 
-   
-        ans_dict[tok2] = backpointer[tok2][max_score_ent]
+        print backpointer
+        ans_dict[tok2] = backpointer[tok1][max_score_ent]
 print ans_dict
 
