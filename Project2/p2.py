@@ -11,6 +11,7 @@ with open("train.txt") as f:
         
 
 train, test = orig_train[:int(len(orig_train)*.9)], orig_train[int(len(orig_train)*.9):]
+val = [("<start>", "<startp>", "<starten>")] + test
 #print train
 #prob(word1|entity)
 def lexical(tup_arr):
@@ -103,7 +104,7 @@ trans = transition(train)
 
 
 ##for initialization
-for (tok1, p1, iob1), (tok2, p2, iob2) in zip(test, test[1:]):
+for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
     if iob1 == "<starten>":
         for entity in possible_entities:
             if (tok2 in getlexicalProb(train, lex_list, token_list)) and (entity in getTransitionProb(unigrams, trans)):
@@ -126,6 +127,7 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(test, test[1:]):
             
 ##iteration
     else:
+        # print score
         max_score_ent = max(score[tok1].iteritems(), key = operator.itemgetter(1))[0]
         max_score = score[tok1][max_score_ent]
         for entity in possible_entities:
@@ -154,13 +156,9 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(test, test[1:]):
                 score = {tok2: {entity: max_score*lexicalProb*transitionProb}}
                 backpointer = {tok2: {entity: max_score_ent}}
    
-    ans_dict = {tok2: backpointer[tok1][max_score_ent]}   
+    ans_dict = {tok2: backpointer[tok2][max_score_ent]}   
         
 print ans_dict
-            
-    
-
-#finishing
                 
                 
             
