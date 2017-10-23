@@ -1,4 +1,4 @@
-from itertools import izip_longest
+from itertools import zip_longest
 from collections import defaultdict
 import math
 
@@ -25,7 +25,7 @@ class HMM():
 	def tokenize_train_list(self, file):
 		train_list = []
 		with open(file) as f:
-		    for toks, pos, iob in izip_longest(*[f]*3, fillvalue = None):
+		    for toks, pos, iob in zip_longest(*[f]*3, fillvalue = None):
 		        train_list.append(("<start>", "<startp>", "<starten>"))
 		        for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
 		            train_list.append((tok,p,i))
@@ -34,7 +34,7 @@ class HMM():
 	def tokenize_test_list(self, file, train):
 		test_list = []
 		with open(file) as f:
-		    for toks, pos, iob in izip_longest(*[f]*3, fillvalue = None):
+		    for toks, pos, iob in zip_longest(*[f]*3, fillvalue = None):
 		        test_list.append(("<start>", "<startp>", "<starten>"))
 		        for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
 		            if tok in train:
@@ -83,19 +83,19 @@ class HMM():
 		return transition_prob
 
 	def viterbi(self, num_iob, num_tests, test_list, lexical_prob, transition_prob):
-		score = [[0 for i in xrange(num_tests)] for _ in xrange(num_iob)]
-		bptr = [[0 for i in xrange(num_tests)] for _ in xrange(num_iob)]
-		T = [0 for _ in xrange(num_tests)]
+		score = [[0 for i in range(num_tests)] for _ in range(num_iob)]
+		bptr = [[0 for i in range(num_tests)] for _ in range(num_iob)]
+		T = [0 for _ in range(num_tests)]
 
-		for i in xrange(num_iob):
+		for i in range(num_iob):
 			score[i][0] = transition_prob[self.iob_tags[i]]["<starten>"] + lexical_prob["<start>"][self.iob_tags[i]] 
 
-		for t in xrange(1, num_tests):
-		    for i in xrange(num_iob):
+		for t in range(1, num_tests):
+		    for i in range(num_iob):
 		        max_score = -float('inf')
 		        max_index = 0
 
-		        for j in xrange(num_iob):
+		        for j in range(num_iob):
 		            prev_max = max_score
 		            max_score = max(score[j][t-1] + transition_prob[self.iob_tags[i]][self.iob_tags[j]], max_score)
 		            
@@ -108,7 +108,7 @@ class HMM():
 		max_T_index = 0
 		max_T = -float('inf')
 
-		for i in xrange(num_iob):
+		for i in range(num_iob):
 		    prev = max_T
 		    max_T = max(score[i][num_tests-1], max_T)
 		    if prev != max_T:
@@ -116,7 +116,7 @@ class HMM():
 
 		T[num_tests-1] = max_T_index
 
-		for i in xrange(num_tests-2, -1, -1):
+		for i in range(num_tests-2, -1, -1):
 		    T[i] = bptr[T[i+1]][i+1]
 
 		return [self.iob_tags[i] for i in T]
@@ -125,7 +125,7 @@ class HMM():
 def main():
 	hmm = HMM("train.txt", "test.txt")
 	for word, iob in zip(hmm.test_list, hmm.T):
-		print word, iob
+		print(word, iob)
 
 
 if __name__ == '__main__':
