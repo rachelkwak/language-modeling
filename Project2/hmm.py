@@ -27,7 +27,12 @@ class HMM():
 
 		self.T = self.viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.transition_prob)
 
+
 	def tokenize_train_list(self, file):
+		""" 
+		Converts the training file into a list of (token, POS tag, IOB tag) tuples 
+
+		"""
 		train_list = []
 		with open(file) as f:
 			for toks, pos, iob in zip_longest(*[f]*3, fillvalue = None):
@@ -48,6 +53,11 @@ class HMM():
 		return test_list
 
 	def tokenize_test_list(self, file, train):
+		"""
+		Converts the test file into a list of (token, POS, index) tuples. If token is not in the 
+		training set, it is stored as <unk>
+
+		"""
 		test_list = []
 		with open(file) as f:
 			for toks, pos, iob in zip_longest(*[f]*3, fillvalue = None):
@@ -59,6 +69,11 @@ class HMM():
 		return test_list
 
 	def get_lexical_counts(self, train):
+		""" 
+		Gets the count of each word for each IOB tag in the training set. Each IOB tag is also counted 
+		under <unk> to collect the distribution of IOB tags.
+		
+		"""
 		lexical_counts = defaultdict(lambda: defaultdict(int))
 		for (tok, p, i) in train:
 			lexical_counts[tok][i] += 1
@@ -66,12 +81,14 @@ class HMM():
 		return lexical_counts
 
 	def get_iob_counts(self, iob_tags, train):
+		""" Gets the count of each IOB tag in the training set """
 		iob_counts = defaultdict(int)
 		for (_, _, iob) in train:
 			iob_counts[iob] += 1
 		return iob_counts
 
 	def get_bigram_transitions(self, train):
+		""" Gets the count of two IOB tags occuring consecutively """
 		bigram_transitions = defaultdict(lambda: defaultdict(int))
 		for (_, _, iob1), (_, _, iob2) in zip(train, train[1:]):
 			if iob2 != "<starten>":
@@ -79,6 +96,11 @@ class HMM():
 		return bigram_transitions
 
 	def get_lexical_prob(self, test, iob_tags, lex_counts, iob_counts):
+		""" 
+		Calculates the probability of P(word | iob) for each word and IOB tag in the test set and
+		stores it in a dictionary
+
+		"""
 		lex_prob = defaultdict(lambda: defaultdict(float))
 		for word, _, _ in test:
 			for iob in iob_tags:
@@ -89,6 +111,10 @@ class HMM():
 		return lex_prob
 
 	def get_transition_prob(self, iob_tags, bigram_transitions, iob_counts):
+		"""	
+		Calculates the probability of P(iob1 | iob2) for each IOB tag and stores it in a dictionary
+
+		"""
 		transition_prob = defaultdict(lambda: defaultdict(float))
 		for iob1 in iob_tags:
 			for iob2 in iob_tags:
@@ -99,6 +125,8 @@ class HMM():
 		return transition_prob
 
 	def viterbi(self, num_iob, num_tests, test_list, lexical_prob, transition_prob):
+		""" Gets the list of predicted IOB tags of the words in a test list with the viterbi algorithm """
+
 		score = [[0 for i in range(num_tests)] for _ in range(num_iob)]
 		bptr = [[0 for i in range(num_tests)] for _ in range(num_iob)]
 		T = [0 for _ in range(num_tests)]
