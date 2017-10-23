@@ -10,34 +10,7 @@ B_PER = 5
 I_PER = 6
 B_LOC = 7
 I_LOC = 8
-words_iob_counts = defaultdict(list)
-
-"""
-def check(words, pos, i):
-	return words[i][0].isupper() and pos[i] == "NNP"
-def trivial():
-    all_ranges = []
-    with open("test.txt") as f:
-        while True:
-            words, pos, index = [f.readline().rstrip().split() for _ in range(3)]
-            if not words or not pos or not index:
-                break
-            i = 0
-            while i < len(words):
-                if check(words, pos, i):
-                    range_index = index[i]
-                    while i+1 < len(words) and check(words, pos, i+1):
-                        i += 1
-                    all_ranges.append(str(range_index) + "-" + str(index[i]))
-                i += 1
-
-    output = open("output.txt", "w")
-    output.write("Type,Prediction\n")
-    output.write("ORG," + " ".join(all_ranges[:len(all_ranges)/4]) + "\n")
-    output.write("MISC," + " ".join(all_ranges[len(all_ranges)/4:len(all_ranges)*2/4]) + "\n")
-    output.write("PER," + " ".join(all_ranges[len(all_ranges)*2/4:len(all_ranges)*3/4]) + "\n")
-    output.write("LOC," + " ".join(all_ranges[len(all_ranges)*3/4:]))
-"""
+words_iob_counts = defaultdict(list) #words and the count of iob tags they had been tagged with
 
 # Text file is represented by orig_train, a list of lists. The inner lists represents a sentence or a line in the file.
 # The sentence is actually a list of lists as well, where each inner list contains a word token, the pos tag of the token, and the iob tag of the token.
@@ -71,12 +44,15 @@ def get_test(text):
             indicies.append(line_ind)
     return words, pos_tags, indicies
 
+# returns the iob tag for each word token
 def get_iobs(line):
     return [iob for tok, pos, iob in line]
 
+# returns the word tokens
 def get_tokens(line):
     return [tok for tok, pos, iob in line]
 
+# returns the pos tag for each word token
 def get_pos(line):
     return [pos for tok, pos, iob in line]
 
@@ -150,7 +126,7 @@ def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, mod
     print("F1-score:  %0.5f" % (2*true_positive/(pred+gold)))
 
 
-
+# keeps count of the number and type of iob tag seen for each word token in the training set
 def iob_counts(train):
     for line in train:
         for tok, pos, iob in line:
@@ -177,6 +153,7 @@ def iob_counts(train):
                 count[I_LOC] += 1
             words_iob_counts[tok] = count
 
+# assigns IOB tag to each word token in test
 def set_tag(test, pos_tags):
     iob_preds = []
     for line, pos_line in zip(test, pos_tags):
@@ -207,6 +184,7 @@ def set_tag(test, pos_tags):
         iob_preds.append(line_pred)
     return iob_preds
 
+
 def main():
     # getting the training data
     orig_train = get_train("train.txt")
@@ -218,20 +196,12 @@ def main():
     iobs_valid = [get_iobs(line) for line in valid]
     org_true, misc_true, per_true, loc_true = entity_index(iobs_valid)
 
-    """
-        Baseline
-        Percision:  0.63417
-        Recall:  0.59442
-        F1-score:  0.61365
-        Kaggle: 0.64833
-    """
     # training and applying baseline on validation set
     iob_counts(train)
     pred_valid = set_tag(toks_valid, pos_valid)
 
     # accuracy measures
     calculate_measures(org_true, misc_true, per_true, loc_true, pred_valid, "Baseline")
-
 
     # get test data, apply baseline, and get entity predictions
     toks, pos, indicies = get_test("test.txt")

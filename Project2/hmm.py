@@ -11,9 +11,7 @@ class HMM():
 			self.train_list = self.tokenize_train_list(train)
 			self.test_list = self.tokenize_test_list(test, set([i[0] for i in self.train_list]))
 		else:
-			orig_train = self.tokenize_train_list(train)
-			self.train_list = orig_train[:int(len(orig_train)*.9)]
-			self.test_list = self.tokenize_valid_list(orig_train[int(len(orig_train)*.9):], set([i[0] for i in self.train_list]))
+			self.train_list, self.test_list = self.tokenize_train_test_list(train)
 
 		self.num_iob = len(self.iob_tags)
 		self.num_tests = len(self.test_list)
@@ -28,6 +26,34 @@ class HMM():
 		self.T = self.viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.transition_prob)
 
 
+	def tokenize_train_test_list(self, file):
+		""" 
+		Converts the training file into two lists of (token, POS tag, IOB tag) tuples.
+		The first list contains first 90% of data from the file and the second list contains the remaining 10%.
+
+		"""
+		file_len = int((sum(1 for line in open(file)))/ 3 * .9)
+		train_list = []
+		test_list = []
+		line_num = 0 
+		train_toks = []
+		with open(file) as f:
+			for toks, pos, iob in zip_longest(*[f]*3, fillvalue = None):
+				if line_num < file_len:
+					train_list.append(("<start>", "<startp>", "<starten>"))
+					for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
+						train_list.append((tok,p,i))
+						train_toks.append(tok)
+				else:
+					for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
+						if tok in train_toks:
+							test_list.append((tok,p,i))
+						else:
+							test_list.append(("<unk>",p,i))
+				line_num += 1
+		return train_list, test_list
+
+
 	def tokenize_train_list(self, file):
 		""" 
 		Converts the training file into a list of (token, POS tag, IOB tag) tuples 
@@ -36,21 +62,10 @@ class HMM():
 		train_list = []
 		with open(file) as f:
 			for toks, pos, iob in zip_longest(*[f]*3, fillvalue = None):
-				train_list.append(("<start>", "<startp>", "<starten>"))
+				train_list.append(("<start>", "<startp>", "<starten>")) 
 				for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
 					train_list.append((tok,p,i))
 		return train_list
-
-	def tokenize_valid_list(self, test, train):
-		test_list = []
-		for line in test:
-			for toks, pos, iob in line:
-				for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
-					if tok in train:
-						test_list.append((tok,p,i))
-					else:
-						test_list.append(("<unk>",p,i))
-		return test_list
 
 	def tokenize_test_list(self, file, train):
 		"""
@@ -166,39 +181,94 @@ class HMM():
 		return [self.iob_tags[i] for i in T]
 
 	def get_indicies(self):
+		"""
+		Gets the index for each word token
+		"""
 		return [ind for _, _, ind in self.test_list if ind != "<starten>"]
 
 	def get_iob_predictions(self):
+		"""
+		Gets the IOB tag prediction for each word token
+		"""
 		return [iob for iob in self.T if iob != "<starten>"]
 
+def entity_index(iobs):
+	"""
+	Takes in iob tags of word tokens as a list of lists (each inner list is a sentence)
+	The index of the word token in the corpus should correspond with the index of its iob tag in the flatten list of iobs
+	Returns the list of entities for each type: ORG, MISC, PER, and LOC; in this order
+	"""
+	org, misc, per, loc = [], [], [], []
+	ind = 0
+	while ind < len(iobs):
+		if iobs[ind] != "O":
+			type = iobs[ind]
+			range_ind = ind
+			while ind+1 < len(iobs) and iobs[ind+1] != type and type[type.index('-')+1:] in iobs[ind+1]:
+				ind += 1
+			irange = str(range_ind) + "-" + str(ind)
+			if "ORG" in type:
+				org.append(irange)
+			elif "MISC" in type:
+				misc.append(irange)
+			elif "PER" in type:
+				per.append(irange)
+			else:
+				loc.append(irange)
+		ind += 1
+	return org, misc, per, loc
+
 def test_entity_index(iobs, indicies):
-    org, misc, per, loc = [], [], [], []
-    ind = 0
-    while ind < len(iobs):
-        if iobs[ind] != "O":
-            type = iobs[ind]
-            range_ind = indicies[ind]
-            while ind+1 < len(iobs) and iobs[ind+1] != type and type[type.index('-')+1:] in iobs[ind+1]:
-                ind += 1
-            range = str(range_ind) + "-" + str(indicies[ind])
-            if "ORG" in type:
-                org.append(range)
-            elif "MISC" in type:
-                misc.append(range)
-            elif "PER" in type:
-                per.append(range)
-            else:
-                loc.append(range)
-        ind += 1
-    return org, misc, per, loc
+	"""
+	Similar to entity_index except the positions for word token are provided and used in listing of entities
+	"""
+	org, misc, per, loc = [], [], [], []
+	ind = 0
+	while ind < len(iobs):
+		if iobs[ind] != "O":
+			type = iobs[ind]
+			range_ind = ind
+			while ind+1 < len(iobs) and iobs[ind+1] != type and type[type.index('-')+1:] in iobs[ind+1]:
+				ind += 1
+			irange = str(range_ind) + "-" + str(indicies[ind])
+			if "ORG" in type:
+				org.append(irange)
+			elif "MISC" in type:
+				misc.append(irange)
+			elif "PER" in type:
+				per.append(irange)
+			else:
+				loc.append(irange)
+		ind += 1
+	return org, misc, per, loc
+
+def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, model_describe):
+	"""
+	Calculates the precision, recall, and f1-score at entity level and prints out the results
+	"""
+	org_pred, misc_pred, per_pred, loc_pred = entity_index(iob_predict)
+    
+	# accuracy measures
+	true_positive = float(sum([1 for org in org_gold if org in org_pred])
+                          + sum([1 for misc in misc_gold if misc in misc_pred])
+                          + sum([1 for per in per_gold if per in per_pred])
+                          + sum([1 for loc in loc_gold if loc in loc_pred]))
+        
+	gold = len(org_gold) + len(misc_gold) + len(per_gold) + len(loc_gold)
+	pred = len(org_pred) + len(misc_pred) + len(per_pred) + len(loc_pred)
+
+	print("\n" + model_describe)
+	print("Percision:  %0.5f" % (true_positive/pred))
+	print("Recall:  %0.5f" % (true_positive/gold))
+	print("F1-score:  %0.5f" % (2*true_positive/(pred+gold)))
 
 def main():
-	#hmm_valid = HMM("train_test.txt")
-	#for word, iob in zip(hmm_valid.test_list, hmm_valid.T):
-	#	print(word, iob)
-	
-	#ind = hmm.get_indicies()
-	#iob = hmm.get_iob_predictions()
+
+	# training on validation set
+	hmm_valid = HMM("train.txt")
+	# accuracy of model
+	org_true, misc_true, per_true, loc_true = entity_index(hmm_valid.get_indicies())
+	calculate_measures(org_true, misc_true, per_true, loc_true, hmm_valid.get_iob_predictions(), "HMM")
 
 	# on test data 
 	hmm = HMM("train.txt", "test.txt")
@@ -210,6 +280,7 @@ def main():
 	output.write("MISC," + " ".join(misc_pred) + "\n")
 	output.write("PER," + " ".join(per_pred) + "\n")
 	output.write("LOC," + " ".join(loc_pred))
+
 
 
 

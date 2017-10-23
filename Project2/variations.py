@@ -1,5 +1,3 @@
-# NOTE: MUST USE PYTHON3+
-
 from itertools import chain, zip_longest
 from collections import Counter
 
@@ -48,15 +46,15 @@ def entity_index(iobs):
             range_ind = ind
             while ind+1 < len(iobs) and iobs[ind+1] != type and type[type.index('-')+1:] in iobs[ind+1]:
                 ind += 1
-            range = str(range_ind) + "-" + str(ind)
+            irange = str(range_ind) + "-" + str(ind)
             if "ORG" in type:
-                org.append(range)
+                org.append(irange)
             elif "MISC" in type:
-                misc.append(range)
+                misc.append(irange)
             elif "PER" in type:
-                per.append(range)
+                per.append(irange)
             else:
-                loc.append(range)
+                loc.append(irange)
         ind += 1
     return org, misc, per, loc
 
@@ -72,15 +70,15 @@ def test_entity_index(iobs, indicies):
             range_ind = indicies[ind]
             while ind+1 < len(iobs) and iobs[ind+1] != type and type[type.index('-')+1:] in iobs[ind+1]:
                 ind += 1
-            range = str(range_ind) + "-" + str(indicies[ind])
+            irange = str(range_ind) + "-" + str(indicies[ind])
             if "ORG" in type:
-                org.append(range)
+                org.append(irange)
             elif "MISC" in type:
-                misc.append(range)
+                misc.append(irange)
             elif "PER" in type:
-                per.append(range)
+                per.append(irange)
             else:
-                loc.append(range)
+                loc.append(irange)
         ind += 1
     return org, misc, per, loc
 
@@ -103,7 +101,7 @@ def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, mod
     print("Recall: " + str(true_positive/gold))
     print("F1-score: " + str(2*true_positive/(pred+gold)))
 
-
+# Extracting features from word tokens
 def word_to_features(line, ind):
     word = line[ind][0]
     postag = line[ind][1]
@@ -144,32 +142,38 @@ def word_to_features(line, ind):
         features['EOS'] = True
     return features
 
+# returns the features for each word token
 def get_features(line):
     return [word_to_features(line, ind) for ind in range(len(line))]
 
+# returns the iob tags for word token
 def get_iobs(line):
     return [iob for tok, pos, iob in line]
 
+# returns the word tokens
 def get_tokens(line):
     return [tok for tok, pos, iob in line]
 
+# prints the transition probability
 def print_transitions(trans_features):
     for (label_from, label_to), weight in trans_features:
         print("%-6s -> %-7s %0.6f" % (label_from, label_to, weight))
 
+# prints the state probability
 def print_state_features(state_features):
     for (attr, label), weight in state_features:
         print("%0.6f %-8s %s" % (weight, label, attr))
 
+# prints the features with the high probabilities for the trained model
 def print_features_stats(crf):
     print("\nTop likely transitions:")
-    print_transitions(Counter(crf.transition_features_).most_common(20))
+    print_transitions(Counter(crf.transition_features_).most_common(10))
     print("\nTop unlikely transitions:")
-    print_transitions(Counter(crf.transition_features_).most_common()[-20:])
-    print("\nTop positive:")
-    print_state_features(Counter(crf.state_features_).most_common(20))
-    print("\nTop negative:")
-    print_state_features(Counter(crf.state_features_).most_common()[-20:])
+    print_transitions(Counter(crf.transition_features_).most_common()[-10:])
+    print("\nTop positive states:")
+    print_state_features(Counter(crf.state_features_).most_common(10))
+    print("\nTop negative states:")
+    print_state_features(Counter(crf.state_features_).most_common()[-10:])
 
 def main():
     # getting the training data
@@ -177,6 +181,7 @@ def main():
 
     # training data is split so that first 90% is the training set and the last 10% is the validation set
     train, valid = orig_train[:int(len(orig_train)*.9)], orig_train[int(len(orig_train)*.9):]
+    valid, train = orig_train[:int(len(orig_train)*.1)], orig_train[int(len(orig_train)*.1):]
     
     # extracting features for word tokens
     X_train = [get_features(line) for line in train]
