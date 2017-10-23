@@ -114,7 +114,7 @@ transition_prob = getTransitionProb(unigrams, trans)
 
 ##for initialization
 for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
-    
+    #print score
     if iob1 == "<starten>":
         for entity in possible_entities:
             if (tok2 in lexical_prob) and (entity in transition_prob):
@@ -138,20 +138,19 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 score[tok2][entity] =  lexicalProb*transitionProb
             else:
                 score[tok2] = {entity: lexicalProb*transitionProb}
-            if tok2 in backpointer:
-                backpointer[tok2][entity] = {entity: "<starten>"}
-            else:
-                backpointer[tok2] = {entity: "<starten>"}
+
+            backpointer[tok2] = {entity: "<starten>"}
             ans_dict["<start>"] = "<starten>"
             
 ##iteration
     else:
-    
-        max_score_ent = max(score[tok1].iteritems(), key = operator.itemgetter(1))[0]
-        print max_score
+    	if tok1[0].isupper():
+    		del score[tok1]['O']
+    	max_score_ent = max(score[tok1].iteritems(), key = operator.itemgetter(1))[0]
         max_score = score[tok1][max_score_ent]
-        print max_score
+
         for entity in possible_entities:
+          
             if (tok2 in lexical_prob) and (entity in transition_prob):
                 if entity in lexical_prob[tok2]:
                     lexicalProb = lexical_prob[tok2][entity]
@@ -193,8 +192,9 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 else:
                     backpointer[tok2] = {entity: max_score_ent}
                 
+                
         ans_dict[tok2] = backpointer[tok2][max_score_ent]
-print ans_dict
+#print ans_dict
 
 def test_entity_index(iobs, indicies):
     org, misc, per, loc = [], [], [], []
@@ -223,6 +223,25 @@ pred_ind = [ind for tok, pos, ind in test]
 
 org_pred, misc_pred, per_pred, loc_pred = test_entity_index(pred_toks, pred_ind)
 
+# calculates the precision, recall, and f1-score at entity level and prints out the results
+def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, model_describe):
+    org_pred, misc_pred, per_pred, loc_pred = entity_index(iob_predict)
+    
+    # accuracy measures
+    true_positive = float(sum([1 for org in org_gold if org in org_pred])
+                          + sum([1 for misc in misc_gold if misc in misc_pred])
+                          + sum([1 for per in per_gold if per in per_pred])
+                          + sum([1 for loc in loc_gold if loc in loc_pred]))
+        
+    gold = len(org_gold) + len(misc_gold) + len(per_gold) + len(loc_gold)
+    pred = len(org_pred) + len(misc_pred) + len(per_pred) + len(loc_pred)
+
+    print("\n" + model_describe)
+    print("Percision:  %0.5f" % (true_positive/pred))
+    print("Recall:  %0.5f" % (true_positive/gold))
+    print("F1-score:  %0.5f" % (2*true_positive/(pred+gold)))
+
+
 # output the results in file named output.txt
 output = open("output.txt", "w")
 output.write("Type,Prediction\n")
@@ -230,4 +249,6 @@ output.write("ORG," + " ".join(org_pred) + "\n")
 output.write("MISC," + " ".join(misc_pred) + "\n")
 output.write("PER," + " ".join(per_pred) + "\n")
 output.write("LOC," + " ".join(loc_pred))
+
+ calculate_measures(org_true, misc_true, per_true, loc_true, pred_valid, "Baseline")
 
