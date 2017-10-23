@@ -138,14 +138,19 @@ for (tok1, p1, iob1), (tok2, p2, iob2) in zip(val, val[1:]):
                 score[tok2][entity] =  lexicalProb*transitionProb
             else:
                 score[tok2] = {entity: lexicalProb*transitionProb}
-            backpointer[tok2] = {entity: "<starten>"}
+            if tok2 in backpointer:
+                backpointer[tok2][entity] = {entity: "<starten>"}
+            else:
+                backpointer[tok2] = {entity: "<starten>"}
             ans_dict["<start>"] = "<starten>"
             
 ##iteration
     else:
     
         max_score_ent = max(score[tok1].iteritems(), key = operator.itemgetter(1))[0]
+        print max_score
         max_score = score[tok1][max_score_ent]
+        print max_score
         for entity in possible_entities:
             if (tok2 in lexical_prob) and (entity in transition_prob):
                 if entity in lexical_prob[tok2]:
