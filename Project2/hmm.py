@@ -76,7 +76,8 @@ class HMM():
 		""" Gets the count of two IOB tags occuring consecutively """
 		bigram_transitions = defaultdict(lambda: defaultdict(int))
 		for (_, _, iob1), (_, _, iob2) in zip(train, train[1:]):
-			bigram_transitions[iob1][iob2] += 1
+			if iob2 != "<starten>":
+				bigram_transitions[iob1][iob2] += 1
 		return bigram_transitions
 
 	def get_lexical_prob(self, test, iob_tags, lex_counts, iob_counts):
@@ -178,18 +179,20 @@ def test_entity_index(iobs, indicies):
 
 def main():
 	hmm = HMM("train.txt", "test.txt")
-	"""
+	
 	for word, iob in zip(hmm.test_list, hmm.T):
 		print(word, iob)
-	"""
+	
 	"""
 	ind = hmm.get_indicies()
 	for pos, i in enumerate(ind):
 		if pos != i:
 			print(pos, i)
 	"""
+	"""
 	ind = hmm.get_indicies()
 	iob = hmm.get_iob_predictions()
+	
 	print(len(ind), ind.count("<starten>"))
 	print(len(iob), iob.count("<starten>"))
 
@@ -199,6 +202,7 @@ def main():
 
 	print(ind.index("1571"))
 	print(hmm.test_list[1701], hmm.T[1701])
+	"""
 	"""
 	org_pred, misc_pred, per_pred, loc_pred = test_entity_index(hmm.get_iob_predictions(), hmm.get_indicies())
 
