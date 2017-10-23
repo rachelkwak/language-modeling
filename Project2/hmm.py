@@ -120,17 +120,69 @@ class HMM():
 			T[i] = bptr[T[i+1]][i+1]
 
 		return [self.iob_tags[i] for i in T]
+
 	def get_indicies(self):
-		pass
+		return [ind for _, _, ind in self.test_list]# if ind != "<starten>"]
 
 	def get_iob_predictions(self):
-		pass
+		return [iob for iob in self.T]# if iob != "<starten>"]
 
+def test_entity_index(iobs, indicies):
+    org, misc, per, loc = [], [], [], []
+    ind = 0
+    while ind < len(iobs):
+        if iobs[ind] != "O":
+            type = iobs[ind]
+            range_ind = indicies[ind]
+            while ind+1 < len(iobs) and iobs[ind+1] != type and type[type.index('-')+1:] in iobs[ind+1]:
+                ind += 1
+            range = str(range_ind) + "-" + str(indicies[ind])
+            if "ORG" in type:
+                org.append(range)
+            elif "MISC" in type:
+                misc.append(range)
+            elif "PER" in type:
+                per.append(range)
+            else:
+                loc.append(range)
+        ind += 1
+    return org, misc, per, loc
 
 def main():
 	hmm = HMM("train.txt", "test.txt")
+	"""
 	for word, iob in zip(hmm.test_list, hmm.T):
 		print(word, iob)
+	"""
+	"""
+	ind = hmm.get_indicies()
+	for pos, i in enumerate(ind):
+		if pos != i:
+			print(pos, i)
+	"""
+	ind = hmm.get_indicies()
+	iob = hmm.get_iob_predictions()
+	print(len(ind), ind.count("<starten>"))
+	print(len(iob), iob.count("<starten>"))
+
+	for a, b in zip(ind, iob):
+		if (a == "<starten>" or b == "<starten>") and a != b:
+			print(a,b)
+
+	print(ind.index("1571"))
+	print(hmm.test_list[1701], hmm.T[1701])
+	"""
+	org_pred, misc_pred, per_pred, loc_pred = test_entity_index(hmm.get_iob_predictions(), hmm.get_indicies())
+
+
+	# output the results in file named output.txt
+	output = open("output.txt", "w")
+	output.write("Type,Prediction\n")
+	output.write("ORG," + " ".join(org_pred) + "\n")
+	output.write("MISC," + " ".join(misc_pred) + "\n")
+	output.write("PER," + " ".join(per_pred) + "\n")
+	output.write("LOC," + " ".join(loc_pred))
+	"""
 
 
 if __name__ == '__main__':
