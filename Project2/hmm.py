@@ -21,6 +21,8 @@ class HMM():
 		self.bigram_transitions = self.get_bigram_transitions(self.train_list)
 
 		self.lexical_prob = self.get_lexical_prob(self.test_list, self.iob_tags, self.trained_lexical_counts, self.iob_counts)
+
+		self.k = 1.0 # K-value for smoothing
 		self.transition_prob = self.get_transition_prob(self.iob_tags, self.bigram_transitions, self.iob_counts)
 
 		self.T = self.viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.transition_prob)
@@ -110,7 +112,7 @@ class HMM():
 				bigram_transitions[iob1][iob2] += 1
 		return bigram_transitions
 
-	def get_lexical_prob(self, test, iob_tags, lex_counts, iob_counts):
+	def get_lexical_prob(self, test, iob_tags, lex_counts, iob_counts,):
 		""" 
 		Calculates the probability of P(word | iob) for each word and IOB tag in the test set and
 		stores it in a dictionary
@@ -136,7 +138,7 @@ class HMM():
 				try:
 					transition_prob[iob1][iob2] = math.log(float(bigram_transitions[iob2][iob1]) / iob_counts[iob2])
 				except ValueError:
-					transition_prob[iob1][iob2] = math.log(1/(float(len(iob_counts)+iob_counts[iob2])))
+					transition_prob[iob1][iob2] = math.log(self.k/(float(len(iob_counts)+iob_counts[iob2])))
 		return transition_prob
 
 	def viterbi(self, num_iob, num_tests, test_list, lexical_prob, transition_prob):
@@ -269,7 +271,7 @@ def main():
 	# accuracy of model
 	org_true, misc_true, per_true, loc_true = entity_index(hmm_valid.get_indicies())
 	calculate_measures(org_true, misc_true, per_true, loc_true, hmm_valid.get_iob_predictions(), "HMM")
-
+	"""
 	# on test data 
 	hmm = HMM("train.txt", "test.txt")
 	org_pred, misc_pred, per_pred, loc_pred = test_entity_index(hmm.get_iob_predictions(), hmm.get_indicies())
@@ -280,6 +282,7 @@ def main():
 	output.write("MISC," + " ".join(misc_pred) + "\n")
 	output.write("PER," + " ".join(per_pred) + "\n")
 	output.write("LOC," + " ".join(loc_pred))
+	"""
 
 
 
