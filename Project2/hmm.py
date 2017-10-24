@@ -1,6 +1,6 @@
 from itertools import zip_longest
 from collections import defaultdict
-import math
+import math, random
 
 class HMM():
 	def __init__(self, train, test = "NULL"):
@@ -11,6 +11,8 @@ class HMM():
 			self.train_list = self.tokenize_train_list(train)
 			self.test_list = self.tokenize_test_list(test, set([i[0] for i in self.train_list]))
 		else:
+			self.train_indicies = []
+			self.test_indicies = []
 			self.train_list, self.test_list = self.tokenize_train_test_list(train)
 
 		self.num_iob = len(self.iob_tags)
@@ -22,36 +24,71 @@ class HMM():
 		self.trigram_transitions = self.get_trigram_transitions(self.train_list)
 
 		self.lexical_prob = self.get_lexical_prob(self.test_list, self.iob_tags, self.trained_lexical_counts, self.iob_counts)
+
+		self.k = 1.0 # K-value for smoothing
 		self.bigram_transition_prob = self.get_bigram_transition_prob(self.iob_tags, self.bigram_transitions, self.iob_counts)
 		self.trigram_transition_prob = self.get_trigram_transition_prob(self.iob_tags, self.trigram_transitions, self.bigram_transitions, self.iob_counts)
 		self.bT = self.bigram_viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.bigram_transition_prob)
 		self.tT = self.trigram_viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.trigram_transition_prob)
 
+
+	def chunk_sampling(self, content):
+		"""
+		Spilts the training data into 10 portion  
+		Takes the last 10% portion of the training data as the test set and the rest as as training set
+		"""
+		lines = int(int(len(content)/3*.9))*3
+		self.train_indicies = range(lines)
+		self.test_indicies = range(lines, len(content))
+
+	def random_sampling(self, content):
+		"""
+		Randomly takes 90% of training data by line as training set and the rest as test set
+		"""
+		lines = random.sample(range(int(len(content)/3)), int(int(len(content)/3*.9)))
+		for i in range(int(len(content)/3)):
+			if i in lines:
+				self.train_indicies.append(i*3)
+				self.train_indicies.append(i*3+1)
+				self.train_indicies.append(i*3+2)
+			else:
+				self.test_indicies.append(i*3)
+				self.test_indicies.append(i*3+1)
+				self.test_indicies.append(i*3+2)
+
 	def tokenize_train_test_list(self, file):
 		""" 
 		Converts the training file into two lists of (token, POS tag, IOB tag) tuples.
-		The first list contains first 90% of data from the file and the second list contains the remaining 10%.
+		First list is the training set and second list is the test set
 
 		"""
-		file_len = int((sum(1 for line in open(file)))/ 3 * .9)
 		train_list = []
 		test_list = []
-		line_num = 0 
 		train_toks = []
+
 		with open(file) as f:
-			for toks, pos, iob in zip_longest(*[f]*3, fillvalue = None):
-				if line_num < file_len:
-					train_list.append(("<start>", "<startp>", "<starten>"))
-					for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
-						train_list.append((tok,p,i))
-						train_toks.append(tok)
+			content = f.read().splitlines()
+
+		# Choose sampling 
+		# Chunk Sampling or Randomied Sampling
+		# The first list contains first 90% of data from the file and the second list contains the remaining 10%.
+		self.chunk_sampling(content)
+		#self.random_sampling(content)
+
+		c_train = [' '.join(content[i].split()) for i in self.train_indicies]
+		c_test = [' '.join(content[i].split()) for i in self.test_indicies]
+
+		for i in range(0, len(c_train), 3):
+			train_list.append(("<start>", "<startp>", "<starten>"))
+			for tok, p, i in zip(c_train[i].rstrip().split(), c_train[i+1].rstrip().split(), c_train[i+2].rstrip().split()):
+				train_list.append((tok,p,i))
+				train_toks.append(tok)
+		for i in range(0, len(c_test), 3):
+			for tok, p, i in zip(c_test[i].rstrip().split(), c_test[i+1].rstrip().split(), c_test[i+2].rstrip().split()):
+				if tok in train_toks:
+					test_list.append((tok,p,i))
 				else:
-					for tok, p, i in zip(toks.rstrip().split(), pos.rstrip().split(), iob.rstrip().split()):
-						if tok in train_toks:
-							test_list.append((tok,p,i))
-						else:
-							test_list.append(("<unk>",p,i))
-				line_num += 1
+					test_list.append(("<unk>",p,i))
 		return train_list, test_list
 
 
@@ -111,6 +148,7 @@ class HMM():
 				bigram_transitions[(iob1, iob2)] += 1
 		return bigram_transitions
 
+
 	def get_trigram_transitions(self, train):
 		""" Gets the count of three IOB tags occuring consecutively """
 		trigram_transitions = defaultdict(int)
@@ -145,7 +183,7 @@ class HMM():
 				try:
 					transition_prob[(iob1, iob2)] = math.log(float(bigram_transitions[(iob2,iob1)]) / iob_counts[iob2])
 				except ValueError:
-					transition_prob[(iob1, iob2)] = math.log(1/(float(len(iob_counts)+iob_counts[iob2])))
+					transition_prob[(iob1, iob2)] = math.log(self.k/(float(len(iob_counts)+iob_counts[iob2])))
 		return transition_prob
 
 	def get_trigram_transition_prob(self, iob_tags, trigram_transitions, bigram_transitions, iob_counts):
@@ -335,7 +373,7 @@ def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, mod
 def main():
 	
 	# training on validation set
-	hmm_valid = HMM("train.txt")
+	hmm_valid = HMM("train_test.txt")
 	# accuracy of model
 	org_true, misc_true, per_true, loc_true = entity_index(hmm_valid.get_indicies())
 	calculate_measures(org_true, misc_true, per_true, loc_true, hmm_valid.get_iob_predictions(), "HMM")
@@ -351,10 +389,10 @@ def main():
 	output.write("MISC," + " ".join(misc_pred) + "\n")
 	output.write("PER," + " ".join(per_pred) + "\n")
 	output.write("LOC," + " ".join(loc_pred))
-	
-	for word, iob in zip(hmm.test_list, hmm.tT):
-		print(word, iob)
 	"""
+
+	#for word, iob in zip(hmm.test_list, hmm.T):
+	#	print(word, iob)
 
 
 if __name__ == '__main__':
