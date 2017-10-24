@@ -24,8 +24,8 @@ class HMM():
 		self.lexical_prob = self.get_lexical_prob(self.test_list, self.iob_tags, self.trained_lexical_counts, self.iob_counts)
 		self.bigram_transition_prob = self.get_bigram_transition_prob(self.iob_tags, self.bigram_transitions, self.iob_counts)
 		self.trigram_transition_prob = self.get_trigram_transition_prob(self.iob_tags, self.trigram_transitions, self.bigram_transitions, self.iob_counts)
-		self.T = self.viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.bigram_transition_prob)
-
+		self.bT = self.bigram_viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.bigram_transition_prob)
+		self.tT = self.trigram_viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.trigram_transition_prob)
 
 	def tokenize_train_test_list(self, file):
 		""" 
@@ -161,11 +161,10 @@ class HMM():
 						transition_prob[(iob3, iob1, iob2)] = math.log(float(trigram_transitions[(iob1, iob2, iob3)]) / bigram_transitions[(iob1, iob2)])
 					except:
 						transition_prob[(iob3, iob1, iob2)] = math.log(0.2*bigram_transitions[(iob3, iob2)]/iob_counts[iob3] + 0.1*iob_counts[iob3]/sum(iob_counts.values()))
-						print(iob1, iob2, iob3, transition_prob[(iob3, iob1, iob2)])
 
 		return transition_prob
 
-	def viterbi(self, num_iob, num_tests, test_list, lexical_prob, transition_prob):
+	def bigram_viterbi(self, num_iob, num_tests, test_list, lexical_prob, transition_prob):
 		""" Gets the list of predicted IOB tags of the words in a test list with the viterbi algorithm """
 
 		score = [[0 for i in range(num_tests)] for _ in range(num_iob)]
@@ -174,7 +173,7 @@ class HMM():
 
 		for i in range(num_iob):
 			score[i][0] = transition_prob[(self.iob_tags[i], "<starten>")] + lexical_prob["<start>"][self.iob_tags[i]] 
-
+		
 		for t in range(1, num_tests):
 			for i in range(num_iob):
 				max_score = -float('inf')
@@ -206,6 +205,51 @@ class HMM():
 
 		return [self.iob_tags[i] for i in T]
 
+	def trigram_viterbi(self, num_iob, num_tests, test_list, lexical_prob, transition_prob):
+		""" Gets the list of predicted IOB tags of the words in a test list with the viterbi algorithm """
+		score = [[[0 for _ in range(num_tests)] for _ in range(num_iob)] for _ in range(num_iob)]
+		bptr = [[[0 for _ in range(num_tests)] for _ in range(num_iob)] for _ in range(num_iob)]
+		T = [0 for _ in range(num_tests)]
+
+		for i in range(num_iob):
+			for j in range(num_iob):
+				score[i][j][0] = -10
+
+		for t in range(1, num_tests):
+			for i in range(num_iob):
+				for j in range(num_iob):
+					max_score = -float('inf')
+					max_index = 0
+
+					for k in range(num_iob):
+						prev_max = max_score
+						max_score = max(score[k][i][t-1] + transition_prob[(self.iob_tags[j], self.iob_tags[k], self.iob_tags[i])], max_score)
+
+						if max_score != prev_max:
+							max_index = k
+
+					score[i][j][t] = max_score + lexical_prob[test_list[t][0]][self.iob_tags[j]]
+					bptr[i][j][t] = max_index
+		max_T_i = 0
+		max_T_j = 0
+		max_T = -float('inf')
+		
+		for i in range(num_iob):
+			for j in range(num_iob):
+				prev_T = max_T
+				max_T = max(score[i][j][num_tests-1], max_T)
+				if prev_T != max_T:
+					max_T_i = i
+					max_T_j = j
+
+		T[num_tests-1] = max_T_j
+		T[num_tests-2] = max_T_i
+
+		for i in range(num_tests-3, -1, -1):
+			T[i] = bptr[T[i+1]][T[i+2]][i+2]
+
+		return [self.iob_tags[i] for i in T]
+
 	def get_indicies(self):
 		"""
 		Gets the index for each word token
@@ -216,7 +260,7 @@ class HMM():
 		"""
 		Gets the IOB tag prediction for each word token
 		"""
-		return [iob for iob in self.T if iob != "<starten>"]
+		return [iob for iob in self.bT if iob != "<starten>"]
 
 def entity_index(iobs):
 	"""
@@ -289,15 +333,16 @@ def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, mod
 	print("F1-score:  %0.5f" % (2*true_positive/(pred+gold)))
 
 def main():
-
+	
 	# training on validation set
 	hmm_valid = HMM("train.txt")
 	# accuracy of model
 	org_true, misc_true, per_true, loc_true = entity_index(hmm_valid.get_indicies())
 	calculate_measures(org_true, misc_true, per_true, loc_true, hmm_valid.get_iob_predictions(), "HMM")
-
+	"""
 	# on test data 
 	hmm = HMM("train.txt", "test.txt")
+	
 	org_pred, misc_pred, per_pred, loc_pred = test_entity_index(hmm.get_iob_predictions(), hmm.get_indicies())
 	# output the results in file named output.txt
 	output = open("output.txt", "w")
@@ -306,9 +351,10 @@ def main():
 	output.write("MISC," + " ".join(misc_pred) + "\n")
 	output.write("PER," + " ".join(per_pred) + "\n")
 	output.write("LOC," + " ".join(loc_pred))
-
-	#for word, iob in zip(hmm.test_list, hmm.T):
-	#	print(word, iob)
+	
+	for word, iob in zip(hmm.test_list, hmm.tT):
+		print(word, iob)
+	"""
 
 
 if __name__ == '__main__':
