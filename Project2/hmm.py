@@ -373,7 +373,7 @@ def calculate_measures(org_gold, misc_gold, per_gold, loc_gold, iob_predict, mod
 def main():
 	
 	# training on validation set
-	hmm_valid = HMM("train_test.txt")
+	hmm_valid = HMM("train.txt")
 	# accuracy of model
 	org_true, misc_true, per_true, loc_true = entity_index(hmm_valid.get_indicies())
 	calculate_measures(org_true, misc_true, per_true, loc_true, hmm_valid.get_iob_predictions(), "HMM")
