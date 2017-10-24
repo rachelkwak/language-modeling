@@ -294,11 +294,17 @@ class HMM():
 		"""
 		return [ind for _, _, ind in self.test_list if ind != "<starten>"]
 
-	def get_iob_predictions(self):
+	def get_bigram_iob_predictions(self):
 		"""
 		Gets the IOB tag prediction for each word token
 		"""
 		return [iob for iob in self.bT if iob != "<starten>"]
+
+	def get_trigram_iob_predictions(self):
+		"""
+		Gets the IOB tag prediction for each word token
+		"""
+		return [iob for iob in self.tT if iob != "<starten>"]
 
 def entity_index(iobs):
 	"""
@@ -376,12 +382,12 @@ def main():
 	hmm_valid = HMM("train.txt")
 	# accuracy of model
 	org_true, misc_true, per_true, loc_true = entity_index(hmm_valid.get_indicies())
-	calculate_measures(org_true, misc_true, per_true, loc_true, hmm_valid.get_iob_predictions(), "HMM")
-	"""
+	calculate_measures(org_true, misc_true, per_true, loc_true, hmm_valid.get_trigram_iob_predictions(), "HMM")
+
 	# on test data 
 	hmm = HMM("train.txt", "test.txt")
 	
-	org_pred, misc_pred, per_pred, loc_pred = test_entity_index(hmm.get_iob_predictions(), hmm.get_indicies())
+	org_pred, misc_pred, per_pred, loc_pred = test_entity_index(hmm.get_trigram_iob_predictions(), hmm.get_indicies())
 	# output the results in file named output.txt
 	output = open("output.txt", "w")
 	output.write("Type,Prediction\n")
@@ -389,7 +395,7 @@ def main():
 	output.write("MISC," + " ".join(misc_pred) + "\n")
 	output.write("PER," + " ".join(per_pred) + "\n")
 	output.write("LOC," + " ".join(loc_pred))
-	"""
+
 
 	#for word, iob in zip(hmm.test_list, hmm.T):
 	#	print(word, iob)
