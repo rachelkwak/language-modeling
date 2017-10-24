@@ -19,13 +19,14 @@ class HMM():
 		self.trained_lexical_counts = self.get_lexical_counts(self.train_list)
 		self.iob_counts = self.get_iob_counts(self.iob_tags, self.train_list)
 		self.bigram_transitions = self.get_bigram_transitions(self.train_list)
+		self.trigram_transitions = self.get_trigram_transitions(self.train_list)
 
 		self.lexical_prob = self.get_lexical_prob(self.test_list, self.iob_tags, self.trained_lexical_counts, self.iob_counts)
 
 		self.k = 1.0 # K-value for smoothing
-		self.transition_prob = self.get_transition_prob(self.iob_tags, self.bigram_transitions, self.iob_counts)
-
-		self.T = self.viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.transition_prob)
+		self.bigram_transition_prob = self.get_bigram_transition_prob(self.iob_tags, self.bigram_transitions, self.iob_counts)
+		self.trigram_transition_prob = self.get_trigram_transition_prob(self.iob_tags, self.trigram_transitions, self.bigram_transitions, self.iob_counts)
+		self.T = self.viterbi(self.num_iob, self.num_tests, self.test_list, self.lexical_prob, self.bigram_transition_prob)
 
 
 	def tokenize_train_test_list(self, file):
@@ -106,13 +107,22 @@ class HMM():
 
 	def get_bigram_transitions(self, train):
 		""" Gets the count of two IOB tags occuring consecutively """
-		bigram_transitions = defaultdict(lambda: defaultdict(int))
+		bigram_transitions = defaultdict(int)
 		for (_, _, iob1), (_, _, iob2) in zip(train, train[1:]):
 			if iob2 != "<starten>":
-				bigram_transitions[iob1][iob2] += 1
+				bigram_transitions[(iob1, iob2)] += 1
 		return bigram_transitions
 
-	def get_lexical_prob(self, test, iob_tags, lex_counts, iob_counts,):
+
+	def get_trigram_transitions(self, train):
+		""" Gets the count of three IOB tags occuring consecutively """
+		trigram_transitions = defaultdict(int)
+		for (_, _, iob1), (_, _, iob2), (_, _, iob3) in zip(train, train[1:], train[2:]):
+			if iob3 != "<starten>":
+				trigram_transitions[(iob1, iob2, iob3)] += 1
+		return trigram_transitions
+
+	def get_lexical_prob(self, test, iob_tags, lex_counts, iob_counts):
 		""" 
 		Calculates the probability of P(word | iob) for each word and IOB tag in the test set and
 		stores it in a dictionary
@@ -127,18 +137,35 @@ class HMM():
 					lex_prob[word][iob] = -100
 		return lex_prob
 
-	def get_transition_prob(self, iob_tags, bigram_transitions, iob_counts):
+	def get_bigram_transition_prob(self, iob_tags, bigram_transitions, iob_counts):
 		"""	
 		Calculates the probability of P(iob1 | iob2) for each IOB tag and stores it in a dictionary
 
 		"""
-		transition_prob = defaultdict(lambda: defaultdict(float))
+		transition_prob = defaultdict(float)
 		for iob1 in iob_tags:
 			for iob2 in iob_tags:
 				try:
-					transition_prob[iob1][iob2] = math.log(float(bigram_transitions[iob2][iob1]) / iob_counts[iob2])
+					transition_prob[(iob1, iob2)] = math.log(float(bigram_transitions[(iob2,iob1)]) / iob_counts[iob2])
 				except ValueError:
-					transition_prob[iob1][iob2] = math.log(self.k/(float(len(iob_counts)+iob_counts[iob2])))
+					transition_prob[(iob1, iob2)] = math.log(self.k/(float(len(iob_counts)+iob_counts[iob2])))
+		return transition_prob
+
+	def get_trigram_transition_prob(self, iob_tags, trigram_transitions, bigram_transitions, iob_counts):
+		"""	
+		Calculates the probability of P(iob3 | iob1 iob2) for each IOB tag and stores it in a dictionary
+
+		"""
+		transition_prob = defaultdict(float)
+		for iob1 in iob_tags:
+			for iob2 in iob_tags:
+				for iob3 in iob_tags:
+					try:
+						transition_prob[(iob3, iob1, iob2)] = math.log(float(trigram_transitions[(iob1, iob2, iob3)]) / bigram_transitions[(iob1, iob2)])
+					except:
+						transition_prob[(iob3, iob1, iob2)] = math.log(0.2*bigram_transitions[(iob3, iob2)]/iob_counts[iob3] + 0.1*iob_counts[iob3]/sum(iob_counts.values()))
+						print(iob1, iob2, iob3, transition_prob[(iob3, iob1, iob2)])
+
 		return transition_prob
 
 	def viterbi(self, num_iob, num_tests, test_list, lexical_prob, transition_prob):
@@ -149,7 +176,7 @@ class HMM():
 		T = [0 for _ in range(num_tests)]
 
 		for i in range(num_iob):
-			score[i][0] = transition_prob[self.iob_tags[i]]["<starten>"] + lexical_prob["<start>"][self.iob_tags[i]] 
+			score[i][0] = transition_prob[(self.iob_tags[i], "<starten>")] + lexical_prob["<start>"][self.iob_tags[i]] 
 
 		for t in range(1, num_tests):
 			for i in range(num_iob):
@@ -158,7 +185,7 @@ class HMM():
 
 				for j in range(num_iob):
 					prev_max = max_score
-					max_score = max(score[j][t-1] + transition_prob[self.iob_tags[i]][self.iob_tags[j]], max_score)
+					max_score = max(score[j][t-1] + transition_prob[(self.iob_tags[i], self.iob_tags[j])], max_score)
 
 					if max_score != prev_max:
 						max_index = j
@@ -284,7 +311,8 @@ def main():
 	output.write("LOC," + " ".join(loc_pred))
 	"""
 
-
+	#for word, iob in zip(hmm.test_list, hmm.T):
+	#	print(word, iob)
 
 
 if __name__ == '__main__':
