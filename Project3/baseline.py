@@ -63,17 +63,20 @@ def main():
 def baseline(json_data):
   context = ""
   question =""
-  ans_arr =[]
+ 
+  ans_str =""
+  ans_dict = {}
+
   i = 0  
   for article in json_data:
     print(i)
     i += 1
     for paragraph in article['paragraphs']:
-      ans_arr =[]
       context = paragraph['context']
       sentences = nltk.sent_tokenize(context)
       for qas in paragraph['qas']:
         question = qas['question']
+        ques_id = qas['id']
         #pos tagging for the question
         #divide the questions into who, what,where et all
         #if a question contains 'who'
@@ -83,30 +86,35 @@ def baseline(json_data):
         ####NER sentence
         ####ans = person from NER
         pos_question = nltk.pos_tag(nltk.word_tokenize(question))
-        iob_question = nltk.tree2conlltags(nltk.ne_chunk(pos_question))
+        #iob_question = nltk.tree2conlltags(nltk.ne_chunk(pos_question))
+        
+        
         for word,pos in pos_question:
-          if pos == 'NNP':
+          print (word, pos)
+          if pos.find('NN') != -1:
             for sentence in sentences:
               if sentence.find(word) != -1:
                 sentence_pos = nltk.pos_tag(sentence)
                 sentence_iob = nltk.tree2conlltags(nltk.ne_chunk(sentence_pos))
+                
                         
                 #person
-                        
+                ans_arr =[]        
                 if question.find('who') != -1:
                   noun = []
                   person = []
+                  
 
                   for word, pos_tag, iob in sentence_iob:
                     if iob == 'B-PERSON' or iob =='I-PERSON':
-                      person.append(iob)
+                      person.append(word)
                     else:
                       if pos_tag == 'NNP':
-                        noun.append(pos_tag)
+                        noun.append(word)
                   if len(person) != 0:
-                    ans_arr.append(person)
+                    ans_arr = person
                   else:
-                    ans_arr.append(noun)
+                    ans_arr = noun
 
                 #location
                 if question.find('where') != -1:
@@ -115,14 +123,14 @@ def baseline(json_data):
 
                   for word, pos_tag, iob in sentence_iob:
                     if iob == 'B-LOCATION' or iob =='I-LOCATION':
-                      location.append(iob)
+                      location.append(word)
                     else:
                       if pos_tag == 'NNP':
-                        noun.append(pos_tag)
+                        noun.append(word)
                   if len(location) != 0:
-                    ans_arr.append(location)
+                    ans_arr = location
                   else:
-                    ans_arr.append(noun)
+                    ans_arr = noun
 
                 #when
                 if question.find('when') != -1:
@@ -131,21 +139,25 @@ def baseline(json_data):
 
                   for word, pos_tag, iob in sentence_iob:
                     if iob == 'B-DATE' or iob =='I-DATE' or iob == 'B-TIME' or 'B-TIME':
-                      time.append(iob)
+                      time.append(word)
                     else:
                       if pos_tag == 'NNP':
-                        noun.append(pos_tag)
+                        noun.append(word)
                   if len(person) != 0:
-                    ans_arr.append(time)
+                    ans_arr = time
                   else:
-                    ans_arr.append(noun)
+                    ans_arr = noun
 
                 else:
                   noun = []
                   for word, pos_tag, iob in sentence_iob:
                     if pos_tag == 'NNP':
-                      noun.append(pos_tag)
-                  ans_arr.append(noun)
+                      noun.append(word)
+                      ans_arr = noun
+                
+                
+                ans_dict[ques_id] = " ".join(ans_arr)
+  return ans_dict
 
 if __name__ == '__main__':
     main()
