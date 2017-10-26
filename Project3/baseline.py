@@ -1,6 +1,7 @@
 import json
 import string
 import sys
+import nltk
 
 def main():
     expected_version = '1.1'
@@ -24,6 +25,97 @@ def main():
                 for ans in qa['answers']:
                     print(ans['text'], ans['answer_start'])
                 print("\n")
+                
+
+def baseline(json_data):
+    context = ""
+    question =""
+    ans_arr =[]
+    
+    for article in json_data:
+        for paragraph in article['paragraphs']:
+            ans_arr =[]
+            context = paragraphs['context']
+            sentences = nltk.sent_tokenize(context)
+            for qas in paragraphs['qas']:
+               question = qas['question']
+               
+               #pos tagging for the question
+               #divide the questions into who, what,where et all
+               #if a question contains 'who'
+               #identify subject
+               ##for senetnce in context token array
+               ###if subject in sentence
+               ####NER sentence
+               ####ans = person from NER
+               
+               pos_question = nltk.pos_tag(nltk.word_tokenize(question))
+               iob_question = nltk.tree2conlltags(nltk.ne_chunk(pos_question))
+               for word,pos in pos_question:
+                   if pos == 'NNP':
+                       for sentence in sentences:
+                           if sentence.find(word) != -1:
+                               sentence_pos = nltk.pos_tag(sentence)
+                               sentence_iob = nltk.tree2conlltags(nltk.ne_chunk(sentence_pos)
+                               
+                               #person
+                               if question.find('who') != -1:
+                                   noun = []
+                                   person = []
+                                   
+                                   for word, pos_tag, iob in sentence_iob:
+                                       if iob == 'B-PERSON' or iob =='I-PERSON':
+                                           person.append(iob)
+                                       else:
+                                           if pos_tag == 'NNP':
+                                               noun.append(pos_tag)
+                                    if len(person) != 0:
+                                        ans_arr.append(person)
+                                    else:
+                                        ans_arr.append(noun)
+                                
+                                #location
+                                if question.find('where') != -1:
+                                    noun = []
+                                    location = []
+                                   
+                                   for word, pos_tag, iob in sentence_iob:
+                                       if iob == 'B-LOCATION' or iob =='I-LOCATION':
+                                           location.append(iob)
+                                       else:
+                                           if pos_tag == 'NNP':
+                                               noun.append(pos_tag)
+                                    if len(person) != 0:
+                                        ans_arr.append(location)
+                                    else:
+                                        ans_arr.append(noun)
+                                        
+                                #when
+                                if question.find('when') != -1:
+                                    noun = []
+                                    time = []
+                                   
+                                   for word, pos_tag, iob in sentence_iob:
+                                       if iob == 'B-DATE' or iob =='I-DATE' 
+                                       or iob == 'B-TIME' or 'B-TIME':
+                                           time.append(iob)
+                                       else:
+                                           if pos_tag == 'NNP':
+                                               noun.append(pos_tag)
+                                    if len(person) != 0:
+                                        ans_arr.append(time)
+                                    else:
+                                        ans_arr.append(noun)
+                                        
+                                else:
+                                    noun = []
+                                    for word, pos_tag, iob in sentence_iob:
+                                        if pos_tag == 'NNP':
+                                            noun.append(pos_tag)
+                                            
+                                    ans_arr.append(nounf)
+                                    
+               
 
 
 if __name__ == '__main__':
@@ -54,3 +146,24 @@ u'paragraphs':[
                         {u'question': u'What are the windows of 1990s and later pubs often made of?', u'id': u'56dfb587231d4119001abca2', u'answers': [{u'text': u'clear glass', u'answer_start': 350}]},
                         {u'question': u'Aside from beverages, what types of food do pubs typically offer?', u'id': u'56dfb587231d4119001abca3', u'answers': [{u'text': u'snacks', u'answer_start': 172}]}]},
 """
+
+               
+#               if question.find('who') != -1:
+#                   for word,pos in pos_question:
+#                       if pos == 'NNP':
+#                           for sentence in sentences:
+#                               if sentence.find(word) != -1:
+#                                   sentence_pos = nltk.pos_tag(sentence)
+#                                   sentence_iob = nltk.tree2conlltags(nltk.ne_chunk(sentence_pos)
+#                                   noun = []
+#                                   person = []
+#                                   for word, pos_tag, iob in sentence_iob:
+#                                       if iob == 'B-PERSON' or iob =='I-PERSON':
+#                                           person.append(iob)
+#                                       else:
+#                                           if pos_tag == 'NNP':
+#                                               noun.append(pos_tag)
+#                                    if len(person) != 0:
+#                                        ans_arr.append(person)
+#                                    else:
+#                                        ans_arr.append(noun)
