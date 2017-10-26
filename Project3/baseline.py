@@ -4,119 +4,118 @@ import sys
 import nltk
 
 def main():
-    expected_version = '1.1'
-    with open('training.json') as dataset_file:
-        dataset_json = json.load(dataset_file)
-        if (dataset_json['version'] != expected_version):
-            print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
-        dataset = dataset_json['data']
-
-    # organized where each document has title, paragraphs
-    # paragraphs has context, qas
-    # qas has question, id, answers
-    # answers has text, answer_start
-    # looping through each article
-    for article in dataset:
-        # print(article['title'])
-        for paragraph in article['paragraphs']:
-            #print(paragraph['context'])
-            for qa in paragraph['qas']:
-                #print(qa['question'], qa['id']
-                for ans in qa['answers']:
-                    print(ans['text'], ans['answer_start'])
-                print("\n")
+  expected_version = '1.1'
+  with open('training.json') as dataset_file:
+    dataset_json = json.load(dataset_file)
+    if (dataset_json['version'] != expected_version):
+      print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
+    dataset = dataset_json['data']
+  #print(len(dataset)) 394
+  baseline(dataset)
+  # organized where each document has title, paragraphs
+  # paragraphs has context, qas
+  # qas has question, id, answers
+  # answers has text, answer_start
+  # looping through each article
+  """
+  for article in dataset:
+    # print(article['title'])
+    for paragraph in article['paragraphs']:
+      #print(paragraph['context'])
+        for qa in paragraph['qas']:
+          #print(qa['question'], qa['id']
+          for ans in qa['answers']:
+            print(ans['text'], ans['answer_start'])
+          print("\n")
+  """
                 
 
 def baseline(json_data):
-    context = ""
-    question =""
-    ans_arr =[]
-    
-    for article in json_data:
-        for paragraph in article['paragraphs']:
-            ans_arr =[]
-            context = paragraphs['context']
-            sentences = nltk.sent_tokenize(context)
-            for qas in paragraphs['qas']:
-               question = qas['question']
-               
-               #pos tagging for the question
-               #divide the questions into who, what,where et all
-               #if a question contains 'who'
-               #identify subject
-               ##for senetnce in context token array
-               ###if subject in sentence
-               ####NER sentence
-               ####ans = person from NER
-               
-               pos_question = nltk.pos_tag(nltk.word_tokenize(question))
-               iob_question = nltk.tree2conlltags(nltk.ne_chunk(pos_question))
-               for word,pos in pos_question:
-                   if pos == 'NNP':
-                       for sentence in sentences:
-                           if sentence.find(word) != -1:
-                               sentence_pos = nltk.pos_tag(sentence)
-                               sentence_iob = nltk.tree2conlltags(nltk.ne_chunk(sentence_pos)
-                               
-                               #person
-                               if question.find('who') != -1:
-                                   noun = []
-                                   person = []
-                                   
-                                   for word, pos_tag, iob in sentence_iob:
-                                       if iob == 'B-PERSON' or iob =='I-PERSON':
-                                           person.append(iob)
-                                       else:
-                                           if pos_tag == 'NNP':
-                                               noun.append(pos_tag)
-                                    if len(person) != 0:
-                                        ans_arr.append(person)
-                                    else:
-                                        ans_arr.append(noun)
-                                
-                                #location
-                                if question.find('where') != -1:
-                                    noun = []
-                                    location = []
-                                   
-                                   for word, pos_tag, iob in sentence_iob:
-                                       if iob == 'B-LOCATION' or iob =='I-LOCATION':
-                                           location.append(iob)
-                                       else:
-                                           if pos_tag == 'NNP':
-                                               noun.append(pos_tag)
-                                    if len(person) != 0:
-                                        ans_arr.append(location)
-                                    else:
-                                        ans_arr.append(noun)
-                                        
-                                #when
-                                if question.find('when') != -1:
-                                    noun = []
-                                    time = []
-                                   
-                                   for word, pos_tag, iob in sentence_iob:
-                                       if iob == 'B-DATE' or iob =='I-DATE' 
-                                       or iob == 'B-TIME' or 'B-TIME':
-                                           time.append(iob)
-                                       else:
-                                           if pos_tag == 'NNP':
-                                               noun.append(pos_tag)
-                                    if len(person) != 0:
-                                        ans_arr.append(time)
-                                    else:
-                                        ans_arr.append(noun)
-                                        
-                                else:
-                                    noun = []
-                                    for word, pos_tag, iob in sentence_iob:
-                                        if pos_tag == 'NNP':
-                                            noun.append(pos_tag)
-                                            
-                                    ans_arr.append(nounf)
-                                    
-               
+  context = ""
+  question =""
+  ans_arr =[]
+  i = 0  
+  for article in json_data:
+    print(i)
+    i += 1
+    for paragraph in article['paragraphs']:
+      ans_arr =[]
+      context = paragraph['context']
+      sentences = nltk.sent_tokenize(context)
+      for qas in paragraph['qas']:
+        question = qas['question']
+        #pos tagging for the question
+        #divide the questions into who, what,where et all
+        #if a question contains 'who'
+        #identify subject
+        ##for senetnce in context token array
+        ###if subject in sentence
+        ####NER sentence
+        ####ans = person from NER
+        pos_question = nltk.pos_tag(nltk.word_tokenize(question))
+        iob_question = nltk.tree2conlltags(nltk.ne_chunk(pos_question))
+        for word,pos in pos_question:
+          if pos == 'NNP':
+            for sentence in sentences:
+              if sentence.find(word) != -1:
+                sentence_pos = nltk.pos_tag(sentence)
+                sentence_iob = nltk.tree2conlltags(nltk.ne_chunk(sentence_pos))
+                        
+                #person
+                        
+                if question.find('who') != -1:
+                  noun = []
+                  person = []
 
+                  for word, pos_tag, iob in sentence_iob:
+                    if iob == 'B-PERSON' or iob =='I-PERSON':
+                      person.append(iob)
+                    else:
+                      if pos_tag == 'NNP':
+                        noun.append(pos_tag)
+                  if len(person) != 0:
+                    ans_arr.append(person)
+                  else:
+                    ans_arr.append(noun)
+
+                #location
+                if question.find('where') != -1:
+                  noun = []
+                  location = []
+
+                  for word, pos_tag, iob in sentence_iob:
+                    if iob == 'B-LOCATION' or iob =='I-LOCATION':
+                      location.append(iob)
+                    else:
+                      if pos_tag == 'NNP':
+                        noun.append(pos_tag)
+                  if len(location) != 0:
+                    ans_arr.append(location)
+                  else:
+                    ans_arr.append(noun)
+
+                #when
+                if question.find('when') != -1:
+                  noun = []
+                  time = []
+
+                  for word, pos_tag, iob in sentence_iob:
+                    if iob == 'B-DATE' or iob =='I-DATE' or iob == 'B-TIME' or 'B-TIME':
+                      time.append(iob)
+                    else:
+                      if pos_tag == 'NNP':
+                        noun.append(pos_tag)
+                  if len(person) != 0:
+                    ans_arr.append(time)
+                  else:
+                    ans_arr.append(noun)
+
+                else:
+                  noun = []
+                  for word, pos_tag, iob in sentence_iob:
+                    if pos_tag == 'NNP':
+                      noun.append(pos_tag)
+                  ans_arr.append(noun)
 
 if __name__ == '__main__':
     main()
