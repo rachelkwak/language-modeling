@@ -3,6 +3,34 @@ import string
 import sys
 import nltk
 
+# Creat ner and pos tags for dataset
+# For content_file: Each article is separated by an empty line. Each line in the article is a paragraph. 
+# For tagged_context_file: Each article is separated by 2 empty lines. Each paragraph of an article is separated by an empty line. For each sentence of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags
+def tag_dataset(dataset):
+  context_file = open('development_context.txt', 'w')
+  tagged_context_file = open('tagged_development_context.txt', 'w')
+  for article in dataset:
+    for paragraph in article['paragraphs']:
+      context = paragraph['context']
+      context_file.write(context + "\n")
+      sentences = nltk.sent_tokenize(context)
+      tokenized_sentences = [nltk.word_tokenize(sent) for sent in sentences]
+      sentences_pos = [nltk.pos_tag(sent) for sent in tokenized_sentences]
+      sentences_iob = [nltk.tree2conlltags(nltk.ne_chunk(sent)) for sent in sentences_pos]
+      for sen in sentences_iob:
+        words = []
+        pos = []
+        ner = []
+        for w, p, n in sen:
+          words.append(w)
+          pos.append(p)
+          ner.append(n)
+        tagged_context_file.write(" ".join(words) + "\n")
+        tagged_context_file.write(" ".join(pos) + "\n")
+        tagged_context_file.write(" ".join(ner) +"\n")
+    context_file.write("\n")
+    tagged_context_file.write("\n")
+
 def main():
   expected_version = '1.1'
   with open('training.json') as dataset_file:
@@ -10,8 +38,10 @@ def main():
     if (dataset_json['version'] != expected_version):
       print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
     dataset = dataset_json['data']
-  #print(len(dataset)) 394
+  #tag_dataset(dataset)
+
   baseline(dataset)
+
   # organized where each document has title, paragraphs
   # paragraphs has context, qas
   # qas has question, id, answers
