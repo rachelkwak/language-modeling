@@ -3,13 +3,32 @@ import string
 import sys
 import nltk
 
-# Creat ner and pos tags for dataset
-# For content_file: Each article is separated by an empty line. Each line in the article is a paragraph. 
-# For tagged_context_file: Each article is separated by 2 empty lines. Each paragraph of an article is separated by an empty line. For each sentence of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags
+"""
+Creat ner and pos tags for dataset
+content_file: Each article is separated by an empty line and the title is written at the first line for each section.  
+              Each line in the article is a paragraph. 
+tagged_context_file: Each article is separated by an empty line and the title is written at the first line for each section. 
+                    Each paragraph of an article is separated by an empty line. 
+                    For each sentence of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags
+questions_file: Each line has the qa[id] and the question. 
+                Questions for each paragrph is separated by an empty line. 
+                Each article is seaprated by 2 empty lines and a line with the article's title. 
+tagged_questions_file: Each article is seaprated by 2 empty lines and a line with the article's title. 
+                       Each paragraph of an article is separated by an empty line. 
+                       For each question of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags. 
+                       All three lines starts with the qa['id'].
+"""
 def tag_dataset(dataset):
-  context_file = open('development_context.txt', 'w')
-  tagged_context_file = open('tagged_development_context.txt', 'w')
+  context_file = open('training_context.txt', 'w')
+  tagged_context_file = open('tagged_training_context.txt', 'w')
+  questions_file = open('training_questions.txt', 'w')
+  tagged_questions_file = open('tagged_training_questions.txt', 'w')
   for article in dataset:
+    title = "TITLE: " + article['title'] + "\n"
+    context_file.write(title)
+    tagged_context_file.write(title)
+    questions_file.write(title)
+    tagged_questions_file.write(title)
     for paragraph in article['paragraphs']:
       context = paragraph['context']
       context_file.write(context + "\n")
@@ -28,6 +47,23 @@ def tag_dataset(dataset):
         tagged_context_file.write(" ".join(words) + "\n")
         tagged_context_file.write(" ".join(pos) + "\n")
         tagged_context_file.write(" ".join(ner) +"\n")
+      for qa in paragraph['qas']:
+        questions_file.write(qa['id'] + " ")
+        question = qa['question']
+        questions_file.write(question + "\n")
+        tokenized_question = nltk.word_tokenize(question)
+        question_pos = nltk.pos_tag(tokenized_question)
+        question_iob = nltk.tree2conlltags(nltk.ne_chunk(question_pos))
+        words = [word for (word, _, _) in question_iob]
+        pos = [pos for (_, pos, _) in question_iob]
+        ner = [ner for (_, _, ner) in question_iob]
+        tagged_questions_file.write(qa['id'] + " " + " ".join(words) + "\n")
+        tagged_questions_file.write(qa['id'] + " " + " ".join(pos) + "\n")
+        tagged_questions_file.write(qa['id'] + " " + " ".join(ner) +"\n")
+      questions_file.write("\n")
+      tagged_questions_file.write("\n")
+    questions_file.write("\n")
+    tagged_questions_file.write("\n")
     context_file.write("\n")
     tagged_context_file.write("\n")
 
