@@ -67,6 +67,14 @@ def tag_dataset(dataset):
     context_file.write("\n")
     tagged_context_file.write("\n")
 
+"""
+Takes in a dictionary where the key is qa['id'] and the value is the answer to the question and outputs it to a json file
+Example: ans = {"57284e9fff5b5019007da154": "are a center in", "57284e9fff5b5019007da152": "a campus located"}
+"""
+def output_answer(ans):
+  with open("output.json", "w") as f:
+    f.write(json.dumps(ans))
+
 def main():
   expected_version = '1.1'
   with open('training.json') as dataset_file:
@@ -75,8 +83,11 @@ def main():
       print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
     dataset = dataset_json['data']
   #tag_dataset(dataset)
-
-  baseline(dataset)
+  answer = {"57284e9fff5b5019007da154": "are a center in", 
+            "57284e9fff5b5019007da152": "a campus located", 
+            "57284e9fff5b5019007da153": "neighborhood of"}
+  output_answer(answer)
+  #baseline(dataset)
 
   # organized where each document has title, paragraphs
   # paragraphs has context, qas
