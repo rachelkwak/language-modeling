@@ -19,16 +19,16 @@ tagged_questions_file: Each article is seaprated by 2 empty lines and a line wit
                        All three lines starts with the qa['id'].
 """
 def tag_dataset(dataset):
-  context_file = open('training_context.txt', 'w')
-  tagged_context_file = open('tagged_training_context.txt', 'w')
+  context_file = open('titled_data/titled_training_context.txt', 'w')
+  tagged_context_file = open('titled_data/tagged_training_context.txt', 'w')
   questions_file = open('training_questions.txt', 'w')
   tagged_questions_file = open('tagged_training_questions.txt', 'w')
   for article in dataset:
-    title = "TITLE: " + article['title'] + "\n"
-    context_file.write(title)
-    tagged_context_file.write(title)
-    questions_file.write(title)
-    tagged_questions_file.write(title)
+    #title = "TITLE: " + article['title'] + "\n"
+    #context_file.write(title)
+    #tagged_context_file.write(title)
+    #questions_file.write(title)
+    #tagged_questions_file.write(title)
     for paragraph in article['paragraphs']:
       context = paragraph['context']
       context_file.write(context + "\n")
@@ -62,6 +62,8 @@ def tag_dataset(dataset):
         tagged_questions_file.write(qa['id'] + " " + " ".join(ner) +"\n")
       questions_file.write("\n")
       tagged_questions_file.write("\n")
+      context_file.write("\n")
+      tagged_context_file.write("\n")
     questions_file.write("\n")
     tagged_questions_file.write("\n")
     context_file.write("\n")
@@ -86,7 +88,7 @@ def main():
   answer = {"57284e9fff5b5019007da154": "are a center in", 
             "57284e9fff5b5019007da152": "a campus located", 
             "57284e9fff5b5019007da153": "neighborhood of"}
-  output_answer(answer)
+  #output_answer(answer)
   #baseline(dataset)
 
   # organized where each document has title, paragraphs
