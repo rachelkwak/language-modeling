@@ -4,23 +4,26 @@ import sys
 import nltk
 
 """
-Creat ner and pos tags for dataset
-content_file: Each article is separated by an empty line and the title is written at the first line for each section.  
-              Each line in the article is a paragraph. 
-tagged_context_file: Each article is separated by an empty line and the title is written at the first line for each section. 
-                    Each paragraph of an article is separated by an empty line. 
-                    For each sentence of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags
-questions_file: Each line has the qa[id] and the question. 
-                Questions for each paragrph is separated by an empty line. 
+Create iob and pos tags for contexts and questions in dataset
+context_file: File to hold the tagged contexts
+              Each article is separated by an empty line and the title is written at the first line for each section. 
+              Each paragraph of an article is separated by an empty line. 
+              For each sentence of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags
+questions_file: File to hold the tagged questions
                 Each article is seaprated by 2 empty lines and a line with the article's title. 
-tagged_questions_file: Each article is seaprated by 2 empty lines and a line with the article's title. 
-                       Each paragraph of an article is separated by an empty line. 
-                       For each question of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags. 
-                       All three lines starts with the qa['id'].
+                Each paragraph of an article is separated by an empty line. 
+                For each question of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags. 
+                All three lines starts with the qa['id'].
 """
-def tag_dataset(dataset):
-  tagged_context_file = open('tagged_training_context.txt', 'w')
-  tagged_questions_file = open('tagged_training_questions.txt', 'w')
+def tag_dataset(dataset_file, context_file, questions_file):
+  expected_version = '1.1'
+  with open(dataset_file) as dataset_file:
+    dataset_json = json.load(dataset_file)
+    if (dataset_json['version'] != expected_version):
+      print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
+    dataset = dataset_json['data']
+  tagged_context_file = open(context_file, 'w')
+  tagged_questions_file = open(questions_file, 'w')
   for article in dataset:
     for paragraph in article['paragraphs']:
       context = paragraph['context']
@@ -41,6 +44,7 @@ def tag_dataset(dataset):
         tagged_context_file.write(" ".join(ner) +"\n")
       
       for qa in paragraph['qas']:
+        question = qa['question']
         tokenized_question = nltk.word_tokenize(question)
         question_pos = nltk.pos_tag(tokenized_question)
         question_iob = nltk.tree2conlltags(nltk.ne_chunk(question_pos))
@@ -56,6 +60,12 @@ def tag_dataset(dataset):
     tagged_questions_file.write("\n")
     tagged_context_file.write("\n")
 
+
+"""
+Return a list data structure that contains the questions and their tags.
+The outermost list is the whole dataset, second layer of list represetns each article, 
+third layer the paragraphs, fourth layer the questions, and last layer list of the word token, pos tag, and iob tag for each word
+"""
 def get_tagged_questions(file):
   articles = []
   article = []
@@ -96,6 +106,11 @@ def get_tagged_questions(file):
   return articles
 
 
+"""
+Return a list data structure that contains the context and their tags.
+The outermost list is the whole dataset, second layer of list represetns each article, 
+third layer the paragraphs, fourth layer the sentence, and last layer list of the word token, pos tag, and iob tag for each word
+"""
 def get_tagged_articles(file):
   articles = []
   article = []
@@ -134,6 +149,7 @@ def get_tagged_articles(file):
         l += 3
   return articles
 
+
 """
 Returns the sentence number with the highest overlapping content words with the question
 """
@@ -147,11 +163,13 @@ def overlaps(paragraph, question):
       amount = count
   return index
 
+
 """
 Returns a dictionary of answers for the questions
 """
 def baseline(articles, questions):
   answer_dict = {}
+  # pos tags for content words
   content_tags = ['CD', 'FW', 'JJ', 'JJR', 'JJS', 'NN', 'NNS', 'NNP', 'NNPS', 'POS', 'PRP',
   'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
 
@@ -167,10 +185,8 @@ def baseline(articles, questions):
       for question in paragraph:
         # get the content words from the question 
         question_content_words = [tok for tok, pos, _ in question if pos in content_tags]
-
         # get the sentence with highest overlap in content words
         answer_sentence = articles[article_num][paragraph_num][overlaps(paragraph_content_words, question_content_words)]
-
         # determine which question it is and give answer accordingly
         answer = []
         question_words = [tok.lower() for tok, _, _ in question]
@@ -189,8 +205,8 @@ def baseline(articles, questions):
         
         # add answer to the answer_dict, where the key is the question id
         answer_dict[question[0][0]] = " ".join(answer)
-
   return answer_dict
+
 
 """
 Takes in a dictionary where the key is qa['id'] and the value is the answer to the question and outputs it to a json file
@@ -200,19 +216,23 @@ def output_predictions(ans, file_name):
   with open(file_name, "w") as f:
     f.write(json.dumps(ans))
 
+
 def main():
-  """
-  expected_version = '1.1'
-  with open('development.json') as dataset_file:
-    dataset_json = json.load(dataset_file)
-    if (dataset_json['version'] != expected_version):
-      print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
-    dataset = dataset_json['data']
-  tag_dataset(dataset)
-  """
-  tagged_articles = get_tagged_articles("tagged_development_context.txt")
-  tagged_questions = get_tagged_questions("tagged_development_questions.txt")
+  # Files for holding the tagged data
+  tagged_context_file = "tagged_development_context.txt"
+  tagged_questions_file = "tagged_development_questions.txt"
+
+  # NOTE: only run this line if the tagged text files do not exist for your json file
+  tag_dataset('development.json', tagged_context_file, tagged_questions_file)
+
+  # Get the tagged data
+  tagged_articles = get_tagged_articles(tagged_context_file)
+  tagged_questions = get_tagged_questions(tagged_questions_file)
+
+  # Get answer predictions for the questions using the tagged data
   answer_predictions = baseline(tagged_articles, tagged_questions)
+
+  # Output the answer predictions with the specified .json file
   output_predictions(answer_predictions, "development_predictions.json")
 
 if __name__ == '__main__':
