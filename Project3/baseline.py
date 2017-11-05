@@ -4,34 +4,29 @@ import sys
 import nltk
 
 """
-Creat ner and pos tags for dataset
-content_file: Each article is separated by an empty line and the title is written at the first line for each section.  
-              Each line in the article is a paragraph. 
-tagged_context_file: Each article is separated by an empty line and the title is written at the first line for each section. 
-                    Each paragraph of an article is separated by an empty line. 
-                    For each sentence of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags
-questions_file: Each line has the qa[id] and the question. 
-                Questions for each paragrph is separated by an empty line. 
+Create iob and pos tags for contexts and questions in dataset
+context_file: File to hold the tagged contexts
+              Each article is separated by an empty line and the title is written at the first line for each section. 
+              Each paragraph of an article is separated by an empty line. 
+              For each sentence of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags
+questions_file: File to hold the tagged questions
                 Each article is seaprated by 2 empty lines and a line with the article's title. 
-tagged_questions_file: Each article is seaprated by 2 empty lines and a line with the article's title. 
-                       Each paragraph of an article is separated by an empty line. 
-                       For each question of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags. 
-                       All three lines starts with the qa['id'].
+                Each paragraph of an article is separated by an empty line. 
+                For each question of a paragraph, first line is the word tokens, second line is the pos tags, third line is the iob tags. 
+                All three lines starts with the qa['id'].
 """
-def tag_dataset(dataset):
-  context_file = open('titled_data/titled_training_context.txt', 'w')
-  tagged_context_file = open('titled_data/tagged_training_context.txt', 'w')
-  questions_file = open('training_questions.txt', 'w')
-  tagged_questions_file = open('tagged_training_questions.txt', 'w')
+def tag_dataset(dataset_file, context_file, questions_file):
+  expected_version = '1.1'
+  with open(dataset_file) as dataset_file:
+    dataset_json = json.load(dataset_file)
+    if (dataset_json['version'] != expected_version):
+      print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
+    dataset = dataset_json['data']
+  tagged_context_file = open(context_file, 'w')
+  tagged_questions_file = open(questions_file, 'w')
   for article in dataset:
-    #title = "TITLE: " + article['title'] + "\n"
-    #context_file.write(title)
-    #tagged_context_file.write(title)
-    #questions_file.write(title)
-    #tagged_questions_file.write(title)
     for paragraph in article['paragraphs']:
       context = paragraph['context']
-      context_file.write(context + "\n")
       sentences = nltk.sent_tokenize(context)
       tokenized_sentences = [nltk.word_tokenize(sent) for sent in sentences]
       sentences_pos = [nltk.pos_tag(sent) for sent in tokenized_sentences]
@@ -47,10 +42,9 @@ def tag_dataset(dataset):
         tagged_context_file.write(" ".join(words) + "\n")
         tagged_context_file.write(" ".join(pos) + "\n")
         tagged_context_file.write(" ".join(ner) +"\n")
+      
       for qa in paragraph['qas']:
-        questions_file.write(qa['id'] + " ")
         question = qa['question']
-        questions_file.write(question + "\n")
         tokenized_question = nltk.word_tokenize(question)
         question_pos = nltk.pos_tag(tokenized_question)
         question_iob = nltk.tree2conlltags(nltk.ne_chunk(question_pos))
@@ -60,200 +54,186 @@ def tag_dataset(dataset):
         tagged_questions_file.write(qa['id'] + " " + " ".join(words) + "\n")
         tagged_questions_file.write(qa['id'] + " " + " ".join(pos) + "\n")
         tagged_questions_file.write(qa['id'] + " " + " ".join(ner) +"\n")
-      questions_file.write("\n")
+
       tagged_questions_file.write("\n")
-      context_file.write("\n")
       tagged_context_file.write("\n")
-    questions_file.write("\n")
     tagged_questions_file.write("\n")
-    context_file.write("\n")
     tagged_context_file.write("\n")
+
+
+"""
+Return a list data structure that contains the questions and their tags.
+The outermost list is the whole dataset, second layer of list represetns each article, 
+third layer the paragraphs, fourth layer the questions, and last layer list of the word token, pos tag, and iob tag for each word
+"""
+def get_tagged_questions(file):
+  articles = []
+  article = []
+  paragraph = []
+  with open(file) as f:
+    lines = f.readlines()
+    l = 0
+    while l < len(lines):
+      if lines[l] == "\n":
+        if not paragraph:
+          articles.append(article)
+          article = []
+        else:
+          article.append(paragraph)
+        l += 1
+        paragraph = []
+      else:
+        toks = lines[l].rstrip().split()
+        pos = lines[l+1].rstrip().split()
+        iob = lines[l+2].rstrip().split()
+        sentence = []
+        for t, p, i in zip(toks, pos, iob):
+          sentence.append((t, p, i))
+        paragraph.append(sentence)
+        l += 3
+
+      if l+3 == len(lines):
+        toks = lines[l].rstrip().split()
+        pos = lines[l+1].rstrip().split()
+        iob = lines[l+2].rstrip().split()
+        sentence = []
+        for t, p, i in zip(toks, pos, iob):
+          sentence.append((t, p, i))
+        paragraph.append(sentence)
+        article.append(paragraph)
+        articles.append(article)
+        l += 3
+  return articles
+
+
+"""
+Return a list data structure that contains the context and their tags.
+The outermost list is the whole dataset, second layer of list represetns each article, 
+third layer the paragraphs, fourth layer the sentence, and last layer list of the word token, pos tag, and iob tag for each word
+"""
+def get_tagged_articles(file):
+  articles = []
+  article = []
+  paragraph = []
+  with open(file) as f:
+    lines = f.readlines()
+    l = 0
+    while l < len(lines):
+      if lines[l] == "\n":
+        if not paragraph:
+          articles.append(article)
+          article = []
+        else:
+          article.append(paragraph)
+        l += 1
+        paragraph = []
+      else:
+        toks = lines[l].rstrip().split()
+        pos = lines[l+1].rstrip().split()
+        iob = lines[l+2].rstrip().split()
+        sentence = []
+        for t, p, i in zip(toks, pos, iob):
+          sentence.append((t, p, i))
+        paragraph.append(sentence)
+        l += 3
+      if l+3 == len(lines):
+        toks = lines[l].rstrip().split()
+        pos = lines[l+1].rstrip().split()
+        iob = lines[l+2].rstrip().split()
+        sentence = []
+        for t, p, i in zip(toks, pos, iob):
+          sentence.append((t, p, i))
+        paragraph.append(sentence)
+        article.append(paragraph)
+        articles.append(article)
+        l += 3
+  return articles
+
+
+"""
+Returns the sentence number with the highest overlapping content words with the question
+"""
+def overlaps(paragraph, question):
+  index = 0
+  amount = -1
+  for sent_num, sent in enumerate(paragraph):
+    count = sum([1 for word in question if word in sent])
+    if count > amount:
+      index = sent_num
+      amount = count
+  return index
+
+
+"""
+Returns a dictionary of answers for the questions
+"""
+def baseline(articles, questions):
+  answer_dict = {}
+  # pos tags for content words
+  content_tags = ['CD', 'FW', 'JJ', 'JJR', 'JJS', 'NN', 'NNS', 'NNP', 'NNPS', 'POS', 'PRP',
+  'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
+
+  for article_num, article in enumerate(questions): # loop through the articles
+    for paragraph_num, paragraph in enumerate(article): # loop through paragraphs of an article
+      
+      # get the content words in the paragraph, where each list of content words is from the same sentence
+      paragraph_content_words = []
+      for sent in articles[article_num][paragraph_num]: 
+        sentence = [tok for tok, pos, _, in sent if pos in content_tags]
+        paragraph_content_words.append(sentence)
+
+      for question in paragraph:
+        # get the content words from the question 
+        question_content_words = [tok for tok, pos, _ in question if pos in content_tags]
+        # get the sentence with highest overlap in content words
+        answer_sentence = articles[article_num][paragraph_num][overlaps(paragraph_content_words, question_content_words)]
+        # determine which question it is and give answer accordingly
+        answer = []
+        question_words = [tok.lower() for tok, _, _ in question]
+        if "who" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "PERSON" in iob and tok not in question_content_words]
+          if not answer:
+            answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
+        elif "where" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "GPE" in iob and tok not in question_content_words]
+        elif "when" in question_words or ("how" in question_words and "many" in question_words):
+          answer = [tok for tok, pos, _ in answer_sentence if "CD" in pos] 
+        elif "which" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
+        if not answer:
+          answer = [tok for tok, pos, _ in answer_sentence if ("NN" in pos) and tok not in question_content_words]
+        
+        # add answer to the answer_dict, where the key is the question id
+        answer_dict[question[0][0]] = " ".join(answer)
+  return answer_dict
+
 
 """
 Takes in a dictionary where the key is qa['id'] and the value is the answer to the question and outputs it to a json file
 Example: ans = {"57284e9fff5b5019007da154": "are a center in", "57284e9fff5b5019007da152": "a campus located"}
 """
-def output_answer(ans):
-  with open("output.json", "w") as f:
+def output_predictions(ans, file_name):
+  with open(file_name, "w") as f:
     f.write(json.dumps(ans))
 
+
 def main():
-  expected_version = '1.1'
-  with open('training.json') as dataset_file:
-    dataset_json = json.load(dataset_file)
-    if (dataset_json['version'] != expected_version):
-      print('Evaluation expects v-' + expected_version + ', but got dataset with v-' + dataset_json['version'])
-    dataset = dataset_json['data']
-  #tag_dataset(dataset)
-  answer = {"57284e9fff5b5019007da154": "are a center in", 
-            "57284e9fff5b5019007da152": "a campus located", 
-            "57284e9fff5b5019007da153": "neighborhood of"}
-  #output_answer(answer)
-  #baseline(dataset)
+  # Files for holding the tagged data
+  tagged_context_file = "tagged_development_context.txt"
+  tagged_questions_file = "tagged_development_questions.txt"
 
-  # organized where each document has title, paragraphs
-  # paragraphs has context, qas
-  # qas has question, id, answers
-  # answers has text, answer_start
-  # looping through each article
-  """
-  for article in dataset:
-    # print(article['title'])
-    for paragraph in article['paragraphs']:
-      #print(paragraph['context'])
-        for qa in paragraph['qas']:
-          #print(qa['question'], qa['id']
-          for ans in qa['answers']:
-            print(ans['text'], ans['answer_start'])
-          print("\n")
-  """
-                
+  # NOTE: only run this line if the tagged text files do not exist for your json file
+  tag_dataset('development.json', tagged_context_file, tagged_questions_file)
 
-def baseline(json_data):
-  context = ""
-  question =""
- 
-  ans_str =""
-  ans_dict = {}
+  # Get the tagged data
+  tagged_articles = get_tagged_articles(tagged_context_file)
+  tagged_questions = get_tagged_questions(tagged_questions_file)
 
-  i = 0  
-  for article in json_data:
-    print(i)
-    i += 1
-    for paragraph in article['paragraphs']:
-      context = paragraph['context']
-      sentences = nltk.sent_tokenize(context)
-      for qas in paragraph['qas']:
-        question = qas['question']
-        ques_id = qas['id']
-        #pos tagging for the question
-        #divide the questions into who, what,where et all
-        #if a question contains 'who'
-        #identify subject
-        ##for senetnce in context token array
-        ###if subject in sentence
-        ####NER sentence
-        ####ans = person from NER
-        pos_question = nltk.pos_tag(nltk.word_tokenize(question))
-        #iob_question = nltk.tree2conlltags(nltk.ne_chunk(pos_question))
-        
-        
-        for word,pos in pos_question:
-          print (word, pos)
-          if pos.find('NN') != -1:
-            for sentence in sentences:
-              if sentence.find(word) != -1:
-                sentence_pos = nltk.pos_tag(sentence)
-                sentence_iob = nltk.tree2conlltags(nltk.ne_chunk(sentence_pos))
-                
-                        
-                #person
-                ans_arr =[]        
-                if question.find('who') != -1:
-                  noun = []
-                  person = []
-                  
+  # Get answer predictions for the questions using the tagged data
+  answer_predictions = baseline(tagged_articles, tagged_questions)
 
-                  for word, pos_tag, iob in sentence_iob:
-                    if iob == 'B-PERSON' or iob =='I-PERSON':
-                      person.append(word)
-                    else:
-                      if pos_tag == 'NNP':
-                        noun.append(word)
-                  if len(person) != 0:
-                    ans_arr = person
-                  else:
-                    ans_arr = noun
-
-                #location
-                if question.find('where') != -1:
-                  noun = []
-                  location = []
-
-                  for word, pos_tag, iob in sentence_iob:
-                    if iob == 'B-LOCATION' or iob =='I-LOCATION':
-                      location.append(word)
-                    else:
-                      if pos_tag == 'NNP':
-                        noun.append(word)
-                  if len(location) != 0:
-                    ans_arr = location
-                  else:
-                    ans_arr = noun
-
-                #when
-                if question.find('when') != -1:
-                  noun = []
-                  time = []
-
-                  for word, pos_tag, iob in sentence_iob:
-                    if iob == 'B-DATE' or iob =='I-DATE' or iob == 'B-TIME' or 'B-TIME':
-                      time.append(word)
-                    else:
-                      if pos_tag == 'NNP':
-                        noun.append(word)
-                  if len(person) != 0:
-                    ans_arr = time
-                  else:
-                    ans_arr = noun
-
-                else:
-                  noun = []
-                  for word, pos_tag, iob in sentence_iob:
-                    if pos_tag == 'NNP':
-                      noun.append(word)
-                      ans_arr = noun
-                
-                
-                ans_dict[ques_id] = " ".join(ans_arr)
-  return ans_dict
+  # Output the answer predictions with the specified .json file
+  output_predictions(answer_predictions, "development_predictions.json")
 
 if __name__ == '__main__':
     main()
-"""
-training file
-{u'title': u'Pub',
-u'paragraphs':[
-               {u'context': u'A pub /p\u028cb/, or public house is, despite its name, a private house, but is called a public house because it is licensed to sell alcohol to the general public. It is a drinking establishment in Britain, Ireland, New Zealand, Australia, Canada, Denmark and New England. In many places, especially in villages, a pub can be the focal point of the community. The writings of Samuel Pepys describe the pub as the heart of England.',
-               u'qas': [{u'question': u'What is a pub licensed to sell?', u'id': u'56dede3c3277331400b4d784', u'answers': [{u'text': u'it is licensed to sell alcohol', u'answer_start': 105}]},
-                        {u'question': u'In many villages what establishment could be called the focal point of the community?', u'id': u'56dede3c3277331400b4d785', u'answers': [{u'text': u'the pub', u'answer_start': 393}]},
-                        {u'question': u"What is the term 'pub' short for?", u'id': u'56dfb4987aa994140058e003', u'answers': [{u'text': u'public house', u'answer_start': 16}]},
-                        {u'question': u'Where in the United States are pubs located?', u'id': u'56dfb4987aa994140058e004', u'answers': [{u'text': u'New England', u'answer_start': 255}]},
-                        {u'question': u'What continental European country has pubs?', u'id': u'56dfb4987aa994140058e005', u'answers': [{u'text': u'Denmark', u'answer_start': 243}]},
-                        {u'question': u'Other than the United States, where in North America are pubs located?', u'id': u'56dfb4987aa994140058e006', u'answers': [{u'text': u'Canada', u'answer_start': 235}]},
-                        {u'question': u'Who said that pubs are the heart of England?', u'id': u'56dfb4987aa994140058e007', u'answers': [{u'text': u'Samuel Pepys', u'answer_start': 371}]}]},
-               {u'context': u'The history of pubs can be traced back to Roman taverns, through the Anglo-Saxon alehouse to the development of the modern tied house system in the 19th century.',
-               u'qas': [{u'question': u'How far back does the history of pubs go back?', u'id': u'56dedf02c65bf219000b3d93', u'answers': [{u'text': u'to Roman taverns', u'answer_start': 39}]},
-                        {u'question': u'What was the Anglo-Saxon pup called? ', u'id': u'56dedf02c65bf219000b3d94', u'answers': [{u'text': u'alehouse', u'answer_start': 81}]},
-                        {u'question': u'What is a pub tied to in the 19th century?', u'id': u'56dedf02c65bf219000b3d95', u'answers': [{u'text': u'the modern tied house system', u'answer_start': 112}]},
-                        {u'question': u'What Roman businesses were analogous to modern day pubs?', u'id': u'56dfb4d6231d4119001abc97', u'answers': [{u'text': u'taverns', u'answer_start': 48}]},
-                        {u'question': u'What similar establishments existed in the Anglo-Saxon world?', u'id': u'56dfb4d6231d4119001abc98', u'answers': [{u'text': u'alehouse', u'answer_start': 81}]},
-                        {u'question': u'In what century did the tied house system develop?', u'id': u'56dfb4d6231d4119001abc99', u'answers': [{u'text': u'19th century', u'answer_start': 148}]}]},
-               {u'context': u'Historically, pubs have been socially and culturally distinct from caf\xe9s, bars and German beer halls. Most pubs offer a range of beers, wines, spirits, and soft drinks and snacks. Traditionally the windows of town pubs were of smoked or frosted glass to obscure the clientele from the street but from the 1990s onwards, there has been a move towards clear glass, in keeping with brighter interiors.',
-               u'qas': [{u'question': u'Why were the windows of town pubs made of smoked or frosted glass traditionally?', u'id': u'56dee02f3277331400b4d79b', u'answers': [{u'text': u'to obscure the clientele from the street', u'answer_start': 251}]},
-                        {u'question': u'What fares do most pubs offer?', u'id': u'56dee02f3277331400b4d79d', u'answers': [{u'text': u'beers, wines, spirits, and soft drinks and snacks', u'answer_start': 129}]},
-                        {u'question': u'What are traditional pub windows made out of?', u'id': u'56dfb587231d4119001abca1', u'answers': [{u'text': u'smoked or frosted glass', u'answer_start': 227}]},
-                        {u'question': u'What are the windows of 1990s and later pubs often made of?', u'id': u'56dfb587231d4119001abca2', u'answers': [{u'text': u'clear glass', u'answer_start': 350}]},
-                        {u'question': u'Aside from beverages, what types of food do pubs typically offer?', u'id': u'56dfb587231d4119001abca3', u'answers': [{u'text': u'snacks', u'answer_start': 172}]}]},
-"""
-
-               
-#               if question.find('who') != -1:
-#                   for word,pos in pos_question:
-#                       if pos == 'NNP':
-#                           for sentence in sentences:
-#                               if sentence.find(word) != -1:
-#                                   sentence_pos = nltk.pos_tag(sentence)
-#                                   sentence_iob = nltk.tree2conlltags(nltk.ne_chunk(sentence_pos)
-#                                   noun = []
-#                                   person = []
-#                                   for word, pos_tag, iob in sentence_iob:
-#                                       if iob == 'B-PERSON' or iob =='I-PERSON':
-#                                           person.append(iob)
-#                                       else:
-#                                           if pos_tag == 'NNP':
-#                                               noun.append(pos_tag)
-#                                    if len(person) != 0:
-#                                        ans_arr.append(person)
-#                                    else:
-#                                        ans_arr.append(noun)
