@@ -2,6 +2,8 @@ import json
 import string
 import sys
 import nltk
+import math
+from collections import Counter
 
 """
 Create iob and pos tags for contexts and questions in dataset
@@ -78,7 +80,7 @@ def get_tagged_questions(file):
   articles = []
   article = []
   paragraph = []
-  with open(file) as f:
+  with open(file, encoding="utf-8") as f:
     lines = f.readlines()
     l = 0
     while l < len(lines):
@@ -123,7 +125,7 @@ def get_tagged_articles(file):
   articles = []
   article = []
   paragraph = []
-  with open(file) as f:
+  with open(file, encoding="utf-8") as f:
     lines = f.readlines()
     l = 0
     while l < len(lines):
@@ -216,6 +218,24 @@ def create_answer(top_entities, qc_words):
         return answer
   return answer
 
+def cosine_similarity(a, b):
+    score = 0
+    
+    length_a = 0
+    for x in a.values():
+        length_a += x * x
+    length_a = math.sqrt(length_a)
+    
+    length_b = 0
+    for x in b.values():
+        length_b += x * x
+    length_b = math.sqrt(length_b)
+    
+    for word in b.keys():
+        score += a[word] * b[word]
+    score /= length_a * length_b
+    
+    return score
 
 
 """
@@ -227,23 +247,28 @@ def passage_retrieval(articles, questions):
   content_tags = ['CD', 'FW', 'JJ', 'JJR', 'JJS', 'NN', 'NNS', 'NNP', 'NNPS', 'POS', 'PRP',
   'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
 
-  for article_num, article in enumerate(questions): # loop through the articles
+  for article_num, article in enumerate(questions): # loop through the questions
     for paragraph_num, paragraph in enumerate(article): # loop through paragraphs of an article
 
       for question in paragraph:
         # get the content words from the question and create the array for the unqiue content words and the vector representation 
         question_content_words = [tok for tok, pos, _ in question if pos in content_tags]
+        question_counter = Counter(question_content_words)
+        
         qc_words, qc_vector = create_question_vector(question_content_words)
 
+        scores = []
         top_scored = [] # HOLD THE TOP N SCORED ENTITIES HERE (SHOULD BE 3 WORD CHUNKS), ordered from highest to lowest score
 
         # DO THE PICKING OF THE TOP K AND N SCORED ENTITIES IN HERE
         for word_chunk in articles[article_num][paragraph_num]: 
-          pass
+          article_counter = Counter([tok for tok, _, _ in word_chunk])
+          scores.append((cosine_similarity(question_counter, article_counter), word_chunk))
 
+        top_scored = [i[1] for i in sorted(scores, key=lambda x: x[0], reverse=True)[:3]]
 
         # FAKE TOP 3 SCORED ENTITES 
-        top_scored = articles[article_num][paragraph_num][:3]
+        #top_scored = articles[article_num][paragraph_num][:3]
         answer = create_answer(top_scored, qc_words)
 
         """
