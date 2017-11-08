@@ -36,7 +36,7 @@ def tag_dataset(dataset_file, context_file, questions_file):
 
       # passage = word chucks of length 5
       context_list = context.rstrip().split()
-      word_chunks = [" ".join(context_list[i:i+5]) for i in range(0, len(context_list), 5)]
+      word_chunks = [" ".join(context_list[i:i+7]) for i in range(0, len(context_list), 7)]
       tokenized_sentences = [nltk.word_tokenize(sent) for sent in word_chunks]
 
       sentences_pos = [nltk.pos_tag(sent) for sent in tokenized_sentences]
@@ -176,6 +176,21 @@ def overlaps(paragraph, question):
   return index
 
 """
+Returns the sentence numbers with the highest overlapping content words with the question
+"""
+def overlapsents(paragraph, question):
+  num = []
+  index = 0
+  amount = -1
+  for sent_num, sent in enumerate(paragraph):
+    count = sum([1 for word in question if word in sent])
+    if count > amount:
+      index = sent_num
+      amount = count
+      num.append(index)
+  return num
+
+"""
 Returns two arrays: qc_words: list of the unique question content words
                     qc_vector: vector representation of qc_words, keeps count of the number of occurances of the content words in the question. 
 The arrays corresponds to eachother via their index number. 
@@ -268,6 +283,8 @@ def passage_retrieval(articles, questions):
         scores = []
         top_scored = [] # HOLD THE TOP N SCORED ENTITIES HERE (SHOULD BE 3 WORD CHUNKS), ordered from highest to lowest score
 
+
+        
         # DO THE PICKING OF THE TOP K AND N SCORED ENTITIES IN HERE
         for word_chunk in articles[article_num][paragraph_num]: 
           article_counter = Counter([tok for tok, _, _ in word_chunk])
@@ -276,32 +293,39 @@ def passage_retrieval(articles, questions):
 
         
 
-        top_scored = [i[1] for i in sorted(scores, key=lambda x: x[0], reverse=True)[:3]]
+        top_scored = [i[1] for i in sorted(scores, key=lambda x: x[0], reverse=True)[:5]]
 
 
         # FAKE TOP 3 SCORED ENTITES 
         #top_scored = articles[article_num][paragraph_num][:3]
         answer = create_answer(top_scored, qc_words)
-
         
-        # # get the sentence with highest overlap in content words
-        # answer_sentence = articles[article_num][paragraph_num][overlaps(paragraph_content_words, question_content_words)]
-        # # determine which question it is and give answer accordingly
-        # answer = []
-        # question_words = [tok.lower() for tok, _, _ in question]
-        # if "who" in question_words:
-        #   answer = [tok for tok, _, iob in answer_sentence if "PERSON" in iob and tok not in question_content_words]
-        #   if not answer:
-        #     answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
-        # elif "where" in question_words:
-        #   answer = [tok for tok, _, iob in answer_sentence if "GPE" in iob and tok not in question_content_words]
-        # elif "when" in question_words or ("how" in question_words and "many" in question_words):
-        #   answer = [tok for tok, pos, _ in answer_sentence if "CD" in pos] 
-        # elif "which" in question_words:
-        #   answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
-        # if not answer:
-        #   #answer = [tok for tok, pos, _ in answer_sentence if ("NN" in pos) and tok not in question_content_words]
-        #   answer = create_answer(top_scored, qc_words)
+        # get the sentence with highest overlap in content words
+        answer_sentence = articles[article_num][paragraph_num][overlaps(paragraph_content_words, question_content_words)]
+       
+        
+       
+        # determine which question it is and give answer accordingly
+        answer = []
+        question_words = [tok.lower() for tok, _, _ in question]
+        if "who" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "PERSON" in iob and tok not in question_content_words]
+          if not answer:
+            answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
+        elif "where" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "GPE" in iob and tok not in question_content_words]
+        elif "when" in question_words or ("how" in question_words and "many" in question_words):
+          answer = [tok for tok, pos, _ in answer_sentence if "CD" in pos] 
+        elif "which" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
+        if not answer:
+          #answer = [tok for tok, pos, _ in answer_sentence if ("NN" in pos) and tok not in question_content_words]
+          #overlapping sentences
+          osents =[]
+          for nums in overlapsents(paragraph_content_words, question_content_words):
+            osents.append(articles[article_num][paragraph_num][nums])
+          answer = create_answer(osents, qc_words)
+        
         
         # add answer to the answer_dict, where the key is the question id
         answer_dict[question[0][0]] = " ".join(answer)
