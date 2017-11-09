@@ -268,7 +268,7 @@ def question_answering(articles, questions, type):
   # pos tags for content words
   content_tags = ['CD', 'FW', 'JJ', 'JJR', 'JJS', 'NN', 'NNS', 'NNP', 'NNPS', 'POS', 'PRP',
   'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
-
+  i = 0
   if type == 1: # passage retrieval
     for article_num, article in enumerate(questions): # loop through the questions
       for paragraph_num, paragraph in enumerate(article): # loop through paragraphs of an article
@@ -295,8 +295,28 @@ def question_answering(articles, questions, type):
             scores.append((cosine_similarity(question_counter, article_counter), word_chunk))
 
           top_scored = [i[1] for i in sorted(scores, key=lambda x: x[0], reverse=True)[:5]]
+          
+          potential_answers = []
+          question_words = [tok.lower() for tok, _, _ in question]
 
-          answer = create_answer(top_scored, qc_words)
+          # NP and NER filter
+          for top_sent in top_scored:
+            p_answer = []
+            if "who" in question_words:
+              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "PERSON" in iob and tok not in question_content_words]
+              if not p_answer:
+                p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "ORGANIZATION" in iob and tok not in question_content_words]
+            elif "where" in question_words:
+              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "GPE" in iob and tok not in question_content_words]
+            elif "when" in question_words or ("how" in question_words and "many" in question_words):
+              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "CD" in pos] 
+            elif "which" in question_words:
+              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "ORGANIZATION" in iob and tok not in question_content_words]
+            if not p_answer:
+              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if ("NN" in pos) and tok not in question_content_words]
+
+            potential_answers.append(p_answer)
+          answer = create_answer(potential_answers, qc_words)
           # add answer to the answer_dict, where the key is the question id
           answer_dict[question[0][0]] = " ".join(answer)
 
@@ -370,11 +390,11 @@ def main():
   # Get answer predictions for the questions using the tagged data
   answer_predictions = question_answering(tagged_articles, tagged_questions, 1)
   # Output the answer predictions with the specified .json file
-  output_predictions(answer_predictions, "testing_consine_predictions_sent.json")
+  output_predictions(answer_predictions, "testing_predictions_sent.json")
 
   # question answering using NP filter and NER tags
-  answer_predictions = question_answering(tagged_articles, tagged_questions, 2)
-  output_predictions(answer_predictions, "testing_ner_predictions_sent.json")
+  #answer_predictions = question_answering(tagged_articles, tagged_questions, 2)
+  #output_predictions(answer_predictions, "testing_ner_predictions_sent.json")
 
 if __name__ == '__main__':
     main()
