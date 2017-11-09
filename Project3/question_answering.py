@@ -260,108 +260,118 @@ def cosine_similarity(a, b):
 
 """
 Returns a dictionary of answers for the questions
-type = 1: use passage retrieval with cosine similarity as QA
-type = 2: use NP filter and NER tags as QA
+Passage retrieval using cosine similarity to get top scored passages
+Potential answers are selected from the top scored passage using NP filter and NER tags for question types
 """
-def question_answering(articles, questions, type):
+def passage_retrieval(articles, questions):
   answer_dict = {}
   # pos tags for content words
   content_tags = ['CD', 'FW', 'JJ', 'JJR', 'JJS', 'NN', 'NNS', 'NNP', 'NNPS', 'POS', 'PRP',
   'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
-  i = 0
-  if type == 1: # passage retrieval
-    for article_num, article in enumerate(questions): # loop through the questions
-      for paragraph_num, paragraph in enumerate(article): # loop through paragraphs of an article
-      
-       # get the content words in the paragraph, where each list of content words is from the same sentence
-        paragraph_content_words = []
-        for sent in articles[article_num][paragraph_num]: 
-          sentence = [tok for tok, pos, _, in sent if pos in content_tags]
-          paragraph_content_words.append(sentence)
-          
-        for question in paragraph:
-          # get the content words from the question and create the array for the unqiue content words and the vector representation 
-          question_content_words = [tok for tok, pos, _ in question if pos in content_tags]
-          question_counter = Counter(question_content_words)
+
+  for article_num, article in enumerate(questions): # loop through the questions
+    for paragraph_num, paragraph in enumerate(article): # loop through paragraphs of an article
+    
+     # get the content words in the paragraph, where each list of content words is from the same sentence
+      paragraph_content_words = []
+      for sent in articles[article_num][paragraph_num]: 
+        sentence = [tok for tok, pos, _, in sent if pos in content_tags]
+        paragraph_content_words.append(sentence)
         
-          qc_words, qc_vector = create_question_vector(question_content_words)
-          scores = []
-          top_scored = [] # HOLD THE TOP N SCORED ENTITIES HERE (SHOULD BE 3 WORD CHUNKS), ordered from highest to lowest score
-          
-          # DO THE PICKING OF THE TOP K AND N SCORED ENTITIES IN HERE
-          for word_chunk in articles[article_num][paragraph_num]: 
-            article_counter = Counter([tok for tok, _, _ in word_chunk])
-            #print cosine_similarity(question_counter, article_counter)
-            scores.append((cosine_similarity(question_counter, article_counter), word_chunk))
-
-          top_scored = [i[1] for i in sorted(scores, key=lambda x: x[0], reverse=True)[:5]]
-          
-          potential_answers = []
-          question_words = [tok.lower() for tok, _, _ in question]
-
-          # NP and NER filter
-          for top_sent in top_scored:
-            p_answer = []
-            if "who" in question_words:
-              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "PERSON" in iob and tok not in question_content_words]
-              if not p_answer:
-                p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "ORGANIZATION" in iob and tok not in question_content_words]
-            elif "where" in question_words:
-              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "GPE" in iob and tok not in question_content_words]
-            elif "when" in question_words or ("how" in question_words and "many" in question_words):
-              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "CD" in pos] 
-            elif "which" in question_words:
-              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "ORGANIZATION" in iob and tok not in question_content_words]
-            if not p_answer:
-              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if ("NN" in pos) and tok not in question_content_words]
-
-            potential_answers.append(p_answer)
-          answer = create_answer(potential_answers, qc_words)
-          # add answer to the answer_dict, where the key is the question id
-          answer_dict[question[0][0]] = " ".join(answer)
-
-  elif type == 2: # NP filter and NER tags
-    for article_num, article in enumerate(questions): # loop through the questions
-      for paragraph_num, paragraph in enumerate(article): # loop through paragraphs of an article
+      for question in paragraph:
+        # get the content words from the question and create the array for the unqiue content words and the vector representation 
+        question_content_words = [tok for tok, pos, _ in question if pos in content_tags]
+        question_counter = Counter(question_content_words)
       
-       # get the content words in the paragraph, where each list of content words is from the same sentence
-        paragraph_content_words = []
-        for sent in articles[article_num][paragraph_num]: 
-          sentence = [tok for tok, pos, _, in sent if pos in content_tags]
-          paragraph_content_words.append(sentence)
-          
-        for question in paragraph:
-          # get the content words from the question and create the array for the unqiue content words and the vector representation 
-          question_content_words = [tok for tok, pos, _ in question if pos in content_tags]
-          question_counter = Counter(question_content_words)
-          qc_words, qc_vector = create_question_vector(question_content_words)
+        qc_words, qc_vector = create_question_vector(question_content_words)
+        scores = []
 
-          # get the sentence with highest overlap in content words
-          answer_sentence = articles[article_num][paragraph_num][overlaps(paragraph_content_words, question_content_words)]
-         
-          # determine which question it is and give answer accordingly
-          answer = []
-          question_words = [tok.lower() for tok, _, _ in question]
+        # get the scoring for each document
+        for word_chunk in articles[article_num][paragraph_num]: 
+          article_counter = Counter([tok for tok, _, _ in word_chunk])
+          #print cosine_similarity(question_counter, article_counter)
+          scores.append((cosine_similarity(question_counter, article_counter), word_chunk))
+
+        # get the top n = 5 scored documents
+        top_scored = [i[1] for i in sorted(scores, key=lambda x: x[0], reverse=True)[:5]]
+        
+        potential_answers = []
+        question_words = [tok.lower() for tok, _, _ in question]
+
+        # NP and NER filter on each document
+        for top_sent in top_scored:
+          p_answer = []
           if "who" in question_words:
-            answer = [tok for tok, _, iob in answer_sentence if "PERSON" in iob and tok not in question_content_words]
-            if not answer:
-              answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
+            p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "PERSON" in iob and tok not in question_content_words]
+            if not p_answer:
+              p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "ORGANIZATION" in iob and tok not in question_content_words]
           elif "where" in question_words:
-            answer = [tok for tok, _, iob in answer_sentence if "GPE" in iob and tok not in question_content_words]
+            p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "GPE" in iob and tok not in question_content_words]
           elif "when" in question_words or ("how" in question_words and "many" in question_words):
-            answer = [tok for tok, pos, _ in answer_sentence if "CD" in pos] 
+            p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "CD" in pos] 
           elif "which" in question_words:
-            answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
-          if not answer:
-            #overlapping sentences
-            osents =[]
-            for nums in overlapsents(paragraph_content_words, question_content_words):
-              osents.append(articles[article_num][paragraph_num][nums])
-            answer = create_answer(osents, qc_words)
-          
-          # add answer to the answer_dict, where the key is the question id
-          answer_dict[question[0][0]] = " ".join(answer)
+            p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if "ORGANIZATION" in iob and tok not in question_content_words]
+          if not p_answer:
+            p_answer = [(tok, pos, iob) for tok, pos, iob in top_sent if ("NN" in pos) and tok not in question_content_words]
+          potential_answers.append(p_answer)
 
+        # get answer using the filtered documents based on length constraint  
+        answer = create_answer(potential_answers, qc_words)
+        # add answer to the answer_dict, where the key is the question id
+        answer_dict[question[0][0]] = " ".join(answer)
+  return answer_dict
+
+
+"""
+Returns a dictionary of answers for the questions
+Baseline consists of NP filter and question types and NER tags for question types
+"""
+def baseline(articles, questions):
+  answer_dict = {}
+  # pos tags for content words
+  content_tags = ['CD', 'FW', 'JJ', 'JJR', 'JJS', 'NN', 'NNS', 'NNP', 'NNPS', 'POS', 'PRP',
+  'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
+
+  for article_num, article in enumerate(questions): # loop through the questions
+    for paragraph_num, paragraph in enumerate(article): # loop through paragraphs of an article
+    
+     # get the content words in the paragraph, where each list of content words is from the same sentence
+      paragraph_content_words = []
+      for sent in articles[article_num][paragraph_num]: 
+        sentence = [tok for tok, pos, _, in sent if pos in content_tags]
+        paragraph_content_words.append(sentence)
+        
+      for question in paragraph:
+        # get the content words from the question and create the array for the unqiue content words and the vector representation 
+        question_content_words = [tok for tok, pos, _ in question if pos in content_tags]
+        question_counter = Counter(question_content_words)
+        qc_words, qc_vector = create_question_vector(question_content_words)
+
+        # get the sentence with highest overlap in content words
+        answer_sentence = articles[article_num][paragraph_num][overlaps(paragraph_content_words, question_content_words)]
+       
+        # determine which question it is and give answer accordingly
+        answer = []
+        question_words = [tok.lower() for tok, _, _ in question]
+        if "who" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "PERSON" in iob and tok not in question_content_words]
+          if not answer:
+            answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
+        elif "where" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "GPE" in iob and tok not in question_content_words]
+        elif "when" in question_words or ("how" in question_words and "many" in question_words):
+          answer = [tok for tok, pos, _ in answer_sentence if "CD" in pos] 
+        elif "which" in question_words:
+          answer = [tok for tok, _, iob in answer_sentence if "ORGANIZATION" in iob and tok not in question_content_words]
+        if not answer:
+          #overlapping sentences
+          osents =[]
+          for nums in overlapsents(paragraph_content_words, question_content_words):
+            osents.append(articles[article_num][paragraph_num][nums])
+          answer = create_answer(osents, qc_words)
+        
+        # add answer to the answer_dict, where the key is the question id
+        answer_dict[question[0][0]] = " ".join(answer)
   return answer_dict
 
 
@@ -380,7 +390,7 @@ def main():
   tagged_questions_file = "tagged_testing_questions_sent.txt"
 
   # NOTE: only run this line if the tagged text files do not exist for your json file
-  #tag_dataset('testing.json', tagged_context_file, tagged_questions_file)
+  tag_dataset('testing.json', tagged_context_file, tagged_questions_file)
 
   # Get the tagged data
   tagged_articles = get_tagged_articles(tagged_context_file)
@@ -388,13 +398,13 @@ def main():
 
   # question answering as passage retrieval 
   # Get answer predictions for the questions using the tagged data
-  answer_predictions = question_answering(tagged_articles, tagged_questions, 1)
-  # Output the answer predictions with the specified .json file
-  output_predictions(answer_predictions, "testing_predictions_sent.json")
+  answer_predictions = passage_retrieval(tagged_articles, tagged_questions)
+  #Output the answer predictions with the specified .json file
+  output_predictions(answer_predictions, "testing_pr_predictions_sent.json")
 
   # question answering using NP filter and NER tags
-  #answer_predictions = question_answering(tagged_articles, tagged_questions, 2)
-  #output_predictions(answer_predictions, "testing_ner_predictions_sent.json")
+  answer_predictions = baseline(tagged_articles, tagged_questions)
+  output_predictions(answer_predictions, "testing_baseline_predictions_sent.json")
 
 if __name__ == '__main__':
     main()
