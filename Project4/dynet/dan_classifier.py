@@ -11,7 +11,7 @@ import dynet as dy
 MAX_EPOCHS = 20
 BATCH_SIZE = 32
 HIDDEN_DIM = 32
-VOCAB_SIZE = __FIXME__
+VOCAB_SIZE = 4748
 
 
 def make_batches(data, batch_size):
@@ -87,10 +87,10 @@ class DANClassifier(object):
         probas = self._predict(sents, train=False)
         probas = [p.value() for p in probas]
         y_true = [y for y, _ in sents]
-
         correct = 0
 
         # FIXME: count the number of correct predictions here
+        correct = sum([1 for prob, y in zip(probas, y_true) if (prob > 0.5 and y) or (prob <= 0.5 and not y)])
 
         return correct
 

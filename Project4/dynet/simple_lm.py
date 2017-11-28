@@ -15,7 +15,7 @@ MAX_EPOCHS = 20
 BATCH_SIZE = 32
 HIDDEN_DIM = 32
 USE_UNLABELED = False
-VOCAB_SIZE = __FIXME__
+VOCAB_SIZE = 4748
 
 
 def make_batches(data, batch_size):
