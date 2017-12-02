@@ -54,11 +54,10 @@ class DANClassifier(object):
         # predict the probability of positive sentiment for each sentence
         for _, sent in batch:
 
-            sent_embed = [dy.lookup(self.embed, w) for w in sent]
-
             if train == True:
-                for exp in sent_embed:
-                    exp = dy.dropout(exp, 0.5)
+                sent_embed = [dy.dropout(dy.lookup(self.embed, w), 0.5) for w in sent]
+            else:
+                sent_embed = [dy.lookup(self.embed, w) for w in sent]
             
             sent_embed = dy.average(sent_embed)
 
