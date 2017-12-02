@@ -93,7 +93,8 @@ if __name__ == '__main__':
         train_ix = pickle.load(f)
 
     if USE_UNLABELED:
-        __FIXME__
+        with open(os.path.join('processed', 'unlab_ix.pkl'), 'rb') as f:
+            train_ix += pickle.load(f)
 
     with open(os.path.join('processed', 'valid_ix.pkl'), 'rb') as f:
         valid_ix = pickle.load(f)
