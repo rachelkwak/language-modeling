@@ -55,6 +55,11 @@ class DANClassifier(object):
         for _, sent in batch:
 
             sent_embed = [dy.lookup(self.embed, w) for w in sent]
+
+            if train == True:
+                for exp in sent_embed:
+                    exp = dy.dropout(exp, 0.5)
+            
             sent_embed = dy.average(sent_embed)
 
             # hid = tanh(b + W * sent_embed)
