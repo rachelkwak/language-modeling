@@ -91,9 +91,7 @@ class DANClassifier(object):
         probas = self._predict(sents, train=False)
         probas = [p.value() for p in probas]
         y_true = [y for y, _ in sents]
-        correct = 0
 
-        # FIXME: count the number of correct predictions here
         correct = sum([1 for prob, y in zip(probas, y_true) if (prob > 0.5 and y) or (prob <= 0.5 and not y)])
 
         return correct
@@ -111,6 +109,7 @@ if __name__ == '__main__':
     params = dy.ParameterCollection()
     trainer = dy.AdadeltaTrainer(params)
     clf = DANClassifier(params, vocab_size=VOCAB_SIZE, hidden_dim=HIDDEN_DIM)
+    clf.embed.populate("embeds_baseline_lm", "/embed")
 
     train_batches = make_batches(train_ix, BATCH_SIZE)
     valid_batches = make_batches(valid_ix, BATCH_SIZE)
