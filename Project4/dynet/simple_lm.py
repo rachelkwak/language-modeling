@@ -14,7 +14,7 @@ import dynet as dy
 MAX_EPOCHS = 20
 BATCH_SIZE = 32
 HIDDEN_DIM = 32
-USE_UNLABELED = False
+USE_UNLABELED = True
 VOCAB_SIZE = 4748
 
 
@@ -41,11 +41,21 @@ class SimpleNLM(object):
         self.hidden_dim = hidden_dim
 
         self.embed = params.add_lookup_parameters((vocab_size, hidden_dim))
+        
+        
+        # Trigram 
+        """
+        self.W_hid = params.add_parameters((hidden_dim*2, hidden_dim*2))
+        self.b_hid = params.add_parameters((hidden_dim*2))
 
-        self.W_hid = params.add_parameters((hidden_dim, hidden_dim))
-        self.b_hid = params.add_parameters((hidden_dim))
+        self.W_out = params.add_parameters((vocab_size, hidden_dim*2))
+		"""
+		
+		# 4-gram
+        self.W_hid = params.add_parameters((hidden_dim*3, hidden_dim*3))
+        self.b_hid = params.add_parameters((hidden_dim*3))
 
-        self.W_out = params.add_parameters((vocab_size, hidden_dim))
+        self.W_out = params.add_parameters((vocab_size, hidden_dim*3))
 
     def batch_loss(self, batch, train=True):
 
@@ -57,15 +67,28 @@ class SimpleNLM(object):
 
         losses = []
         for _, sent in batch:
-            for i in range(1, len(sent)):
-                prev_word_ix = sent[i - 1]
+        	# For trigram change to 2, for 4-gram change to 3
+            for i in range(3, len(sent)):
+            	# Trigram
+            	# prev_1_ix, prev_2_ix = sent[i - 1], sent[i-2]
+            	
+            	# 4-gram
+                prev_1_ix, prev_2_ix, prev_3_ix = sent[i - 1], sent[i-2], sent[i-3]
                 curr_word_ix = sent[i]
-
-                ctx = dy.lookup(self.embed, prev_word_ix)
+                
+                # Trigram
+                # ctx = dy.concatenate([dy.lookup(self.embed, prev_1_ix),
+                #						dy.lookup(self.embed, prev_2_ix)])
+                
+                # 4-gram
+                ctx = dy.concatenate([dy.lookup(self.embed, prev_1_ix),
+                						dy.lookup(self.embed, prev_2_ix),
+                						dy.lookup(self.embed, prev_3_ix)])
 
                 # hid is the hidden layer output, size=hidden_size
                 # compute b_hid + W_hid * ctx, but faster
                 hid = dy.affine_transform([b_hid, W_hid, ctx])
+                
                 hid = dy.tanh(hid)
 
                 # out is the prediction of the next word, size=vocab_size
