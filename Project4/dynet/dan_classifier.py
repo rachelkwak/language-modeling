@@ -105,14 +105,20 @@ if __name__ == '__main__':
     with open(os.path.join('processed', 'valid_ix.pkl'), 'rb') as f:
         valid_ix = pickle.load(f)
 
+    with open(os.path.join('processed', 'test_ix.pkl'), 'rb') as f:
+        test_ix = pickle.load(f)
+
     # initialize dynet parameters and learning algorithm
     params = dy.ParameterCollection()
     trainer = dy.AdadeltaTrainer(params)
     clf = DANClassifier(params, vocab_size=VOCAB_SIZE, hidden_dim=HIDDEN_DIM)
-    clf.embed.populate("embeds_baseline_lm", "/embed")
+
+    #added this
+    clf.embed.populate("embeds_trigram_lm", "/embed")
 
     train_batches = make_batches(train_ix, BATCH_SIZE)
     valid_batches = make_batches(valid_ix, BATCH_SIZE)
+    test_batches = make_batches(test_ix, BATCH_SIZE)
 
     for it in range(MAX_EPOCHS):
         tic = clock()
@@ -134,13 +140,22 @@ if __name__ == '__main__':
 
         valid_acc /= len(valid_ix)
 
+        test_acc = 0
+        for batch in test_batches:
+            dy.renew_cg()
+            test_acc += clf.num_correct(batch)
+
+        test_acc /= len(test_ix)
+
         toc = clock()
 
         print(("Epoch {:3d} took {:3.1f}s. "
                "Train loss: {:8.5f} "
-               "Valid accuracy: {:8.2f}").format(
+               "Valid accuracy: {:8.2f} "
+               "Test accuracy: {:8.2f}").format(
             it,
             toc - tic,
             total_loss / len(train_ix),
-            valid_acc * 100
+            valid_acc * 100,
+            test_acc * 100,
             ))
