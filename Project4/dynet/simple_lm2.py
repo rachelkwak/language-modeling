@@ -14,7 +14,7 @@ import dynet as dy
 MAX_EPOCHS = 20
 BATCH_SIZE = 32
 HIDDEN_DIM = 32
-USE_UNLABELED = True
+USE_UNLABELED = False
 VOCAB_SIZE = 4748
 
 
@@ -164,7 +164,7 @@ if __name__ == '__main__':
             ))
 
     # FIXME: make sure to update filenames when implementing ngram models
-    fn = "embeds_3gram_lm"
+    fn = "embeds_4gram_lm"
     if USE_UNLABELED:
         fn += "_unlabeled"
 
